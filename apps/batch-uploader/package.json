@@ -1,0 +1,18 @@
+{
+  "name": "@exness/batch-uploader",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@exness/redis-client": "*",
+    "@exness/prisma-client": "*",
+    "@exness/price-poller": "*",
+    "@exness/price-utils": "*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

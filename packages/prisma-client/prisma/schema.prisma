@@ -61,3 +61,17 @@ model ClosedOrder {
   @@index([asset])
   @@map("closed_orders")
 }
+
+model Trade {
+  id              String          @default(cuid())
+  time            DateTime        @db.Timestamptz
+  symbol          String
+  priceInt        BigInt          // Prices as integer(scaled by 10^8)
+  qtyInt          BigInt          // Quantity as integer(scaled by 10^8)
+  createdAt       DateTime        @default(now())
+
+  @@id([id, time])
+  @@index([symbol, time])
+  @@index([time])
+  @@map("trades")
+}

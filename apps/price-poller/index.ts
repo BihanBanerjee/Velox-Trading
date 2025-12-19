@@ -6,7 +6,7 @@ import { STREAMS, createPriceUpdate, serializeForStream } from "@exness/redis-st
 const SUPPORTED_PAIRS = ["btcusdt", "solusdt", "ethusdt"];
 
 async function main () {
-    const ws = new WebSocket("wss://stream.binance.com/ws"); // creating a web-socket client connection to listen to the streams coming from Binance's WS server.
+    const ws = new WebSocket("wss://stream.binance.com:9443/ws"); // creating a web-socket client connection to listen to the streams coming from Binance's WS server.
     
     ws.onopen = () => { // onopen is an event handler(not a method) that gets triggered when the WebSocket connection is successfully established with the Binance WS server.
         console.log("Connected to Binance");
@@ -21,7 +21,7 @@ async function main () {
     ws.onmessage = async ({ data }) => {
         try {
             const payload = JSON.parse(data.toString())
-            if (!payload.p || !payload.T || payload.s || payload.q) {
+            if (!payload.p || !payload.T || !payload.s || !payload.q) {
                 return;
             }
 
