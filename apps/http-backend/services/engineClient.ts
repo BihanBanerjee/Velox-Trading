@@ -10,10 +10,20 @@ import { getSubscriber } from "@exness/redis-client/subscriber";
 import { 
     createRequest, 
     STREAMS, 
+    type CloseOrderPayload, 
+    type CloseOrderResponseData, 
+    type GetOrderPayload, 
+    type GetOrderResponseData, 
+    type GetUserOrdersResponseData, 
+    type GetUserOrdersPayload, 
+    type PlaceOrderPayload, 
+    type PlaceOrderResponseData, 
     type RequestType, 
     type SignupUserPayload, 
     type signupUserResponseData, 
-    type StreamResponse 
+    type StreamResponse, 
+    type GetBalanceResponseData,
+    type GetBalancePayload
 } from "@exness/redis-stream-types";
 
 const DEFAULT_TIMEOUT = 5000 // 5 seconds
@@ -72,7 +82,78 @@ export class EngineClient {
         );
     }
 
+    /**
+     * Place a new order
+     */
 
+    async placeOrder (
+        userId: string,
+        payload: PlaceOrderPayload
+    ): Promise<StreamResponse<PlaceOrderResponseData>> {
+        return this.sendRequest<PlaceOrderPayload, PlaceOrderResponseData>(
+            "PLACE_ORDER",
+            userId,
+            payload
+        )
+    }
+
+    /**
+     * Close an existing order
+     */
+
+    async closeOrder(
+        userId: string,
+        orderId: string
+    ): Promise<StreamResponse<CloseOrderResponseData>> {
+        return this.sendRequest<CloseOrderPayload, CloseOrderResponseData>(
+            "CLOSE_ORDER",
+            userId,
+            { orderId }
+        );
+    }
+
+    /**
+     * Get user balance
+     */
+    async getBalance(
+        userId: string
+    ): Promise<StreamResponse<GetBalanceResponseData>> {
+        return this.sendRequest<GetBalancePayload, GetBalanceResponseData>(
+            "GET_BALANCE",
+            userId,
+            {}
+        );
+    }
+
+
+    /**
+     * Get a specific order
+     */
+    async getOrder(
+        userId: string, 
+        orderId: string
+    ) : Promise<StreamResponse<GetOrderResponseData>> {
+        return this.sendRequest<GetOrderPayload, GetOrderResponseData>(
+            "GET_ORDER",
+            userId,
+            { orderId }
+        );
+    }
+
+
+    /**
+     * Get all user orders (optionally filtered by status)
+     */
+    async getUserOrders(
+        userId: string,
+        status?: "OPEN" | "CLOSED"
+    ): Promise<StreamResponse<GetUserOrdersResponseData>> {
+        return this.sendRequest<GetUserOrdersPayload, GetUserOrdersResponseData>(
+            "GET_USER_ORDERS",
+            userId,
+            { status }
+        );
+    }
 }
 
 // Export singleton instance

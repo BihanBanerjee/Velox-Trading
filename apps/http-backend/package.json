@@ -22,6 +22,7 @@
     "jsonwebtoken": "^9.0.3",
     "@exness/prisma-client": "*",
     "@exness/redis-client": "*",
-    "@exness/redis-stream-types": "*"
+    "@exness/redis-stream-types": "*",
+    "@exness/price-utils": "*"
   }
 }

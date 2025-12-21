@@ -58,16 +58,6 @@ export interface RegisterUserPayload {
 }
 
 
-// ---------------------------- Response Data -------------------------------
-
-export interface BalanceData {
-    balanceInt: bigint;
-    userId: string;
-}
-export interface RegisterUserResponseData {
-    balance: BalanceData
-}
-
 export interface PriceUpdateMessage extends BaseStreamMessage<PriceUpdatePayload>{
     type: "PRICE_UPDATE"
 }
@@ -84,10 +74,78 @@ export interface SignupUserPayload {
     initialBalanceInt: bigint; // Initial dummy balance (e.g., 100000000000 = 1000 USD)
 }
 
+export interface PlaceOrderPayload {
+    orderType: OrderType; // LONG or SHORT
+    asset: Asset; // BTCUSDT, ETHUSDT, SOLUSDT
+    leverage: number; // 1-100
+    qty: number; // Quantity or volume to trade
+    stopLoss?: number // Optional stop loss price
+    takeProfit?: number // Optional take profit price
+}
+
+export interface CloseOrderPayload {
+    orderId: string;
+}
+
+export interface GetBalancePayload {
+    // userId is already in the request base
+}
+
+export interface GetOrderPayload {
+    orderId: string;
+}
+
+export interface GetUserOrdersPayload {
+    status?: OrderStatus // Optional filter by status
+}
+
 // --------------------------- Response Data ------------------------------------
+
+export interface OrderData {
+    orderId: string;
+    status: OrderStatus;
+    orderType: OrderType;
+    asset: Asset;
+    leverage: number;
+    marginInt: bigint;
+    executionPriceInt: bigint;
+    qtyInt: bigint;
+    stopLossInt: bigint;
+    takeProfitInt: bigint;
+    liquidationPriceInt: bigint; // Calculated liquidation price
+    createdAt: Date;
+    finalPnLInt: bigint;
+    userId: string;
+}
+
 export interface BalanceData {
     balanceInt: bigint;
     userId: string;
+}
+
+export interface PlaceOrderResponseData {
+    order: OrderData;
+    balance: BalanceData
+}
+
+export interface CloseOrderResponseData {
+    order: OrderData;
+    balance: BalanceData;
+    PnL: string; // Formatted P&L string
+}
+
+
+export interface GetOrderResponseData {
+    order: OrderData
+}
+
+export interface GetUserOrdersResponseData {
+    orders: OrderData[];
+    count: number;
+}
+
+export interface GetBalanceResponseData {
+    balance: BalanceData
 }
 
 export interface signupUserResponseData {

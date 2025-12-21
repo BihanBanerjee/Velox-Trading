@@ -47,6 +47,7 @@
     "apps/http-backend": {
       "name": "@exness/http-backend",
       "dependencies": {
+        "@exness/price-utils": "*",
         "@exness/prisma-client": "*",
         "@exness/redis-client": "*",
         "@exness/redis-stream-types": "*",
