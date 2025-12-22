@@ -152,6 +152,56 @@ export interface signupUserResponseData {
     balance: BalanceData
 }
 
+// ---------------------------- Snapshot Data Structure ----------------------------
+
+export interface UserState {
+    userId: string;
+    balanceInt: bigint;
+    orders: string[]; // Array of order IDs
+}
+
+export interface OrderState {
+    orderId: string;
+    status: OrderStatus;
+    orderType: OrderType;
+    asset: Asset;
+    leverage: number;
+    marginInt: bigint;
+    executionPriceInt: bigint;
+    qtyInt: bigint;
+    stopLossInt: bigint;
+    takeProfitInt: bigint;
+    liquidationPriceInt: bigint;
+    createdAt: Date;
+    finalPnLInt: bigint;
+    userId: string;
+}
+
+export interface StateSnapshot {
+    snapshotId: string;
+    timestamp: number;
+    lastStreamId: string; // Last processed Redis Stream ID
+    users: Record<string, UserState>; // userdId -> UserState
+    orders: Record<string, OrderState>; // orderId -> OrderState
+}
+
+
+
+// -------------------------- Error Types ----------------------------
+export enum ErrorCode {
+    INSUFFICIENT_BALANCE = "INSUFFICIENT_BALANCE",
+    INVALID_LEVERAGE = "INVALID_LEVERAGE",
+    INVALID_QUANTITY = "INVALID_QUANTITY",
+    INVALID_PRICE = "INVALID_PRICE",
+    ORDER_NOT_FOUND = "ORDER_NOT_FOUND",
+    ORDER_ALREADY_CLOSED = "ORDER_ALREADY_CLOSED",
+    USER_NOT_FOUND = "USER_NOT_FOUND",
+    PRICE_DATA_UNAVAILABLE = "PRICE_DATA_UNAVAILABLE",
+    INTERNAL_ERROR = "INTERNAL_ERROR",
+    REQUEST_TIMEOUT = "REQUEST_TIMEOUT",
+}
+
+
 // ------------------- Utility Functions -------------------------------
 
 /*
@@ -197,6 +247,39 @@ export function createRequest<T>(
         payload
     }
 }
+
+/**
+ * Create a success response
+ */
+export function createSuccessResponse<T>(
+    requestId: string,
+    data: T
+): StreamResponse<T>{
+    return {
+        requestId,
+        success: true,
+        timestamp: Date.now(),
+        data,
+    }
+}
+
+
+/**
+ * Create an error response
+ */
+export function createErrorResponse(
+    requestId: string,
+    error: string
+): StreamResponse {
+    return {
+        requestId,
+        success: false,
+        timestamp: Date.now(),
+        error,
+    };
+}
+
+
 
 /**
  * Serialize BigInt values for JSON transmission
