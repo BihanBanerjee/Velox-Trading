@@ -10,6 +10,14 @@ import type Redis from 'ioredis';
 import { createErrorResponse, 
     createSuccessResponse, 
     ErrorCode, 
+    type CloseOrderPayload, 
+    type CloseOrderResponseData, 
+    type GetBalancePayload, 
+    type GetBalanceResponseData, 
+    type GetOrderPayload, 
+    type GetOrderResponseData, 
+    type GetUserOrdersPayload, 
+    type GetUserOrdersResponseData, 
     type PlaceOrderPayload, 
     type PlaceOrderResponseData, 
     type SignupUserPayload, 
@@ -17,8 +25,20 @@ import { createErrorResponse,
     type StreamRequest, 
     type StreamResponse 
 } from "@exness/redis-stream-types";
-import { formatPrice, isValidPrice, isValidQuantity, toInteger } from "@exness/price-utils";
-import { isValidLeverage } from "../utils/liquidation";
+
+import { add, formatPrice, subtract, toInteger } from "@exness/price-utils";
+
+import { 
+    isValidLeverage, 
+    isValidPrice, 
+    isValidQuantity 
+} from "../utils/validation";
+
+import { 
+    calculateCurrentPnL,
+    calculateLiquidationPrice, 
+    calculateRequiredMargin 
+} from "../utils/liquidation";
 
 export class RequestHandler {
     constructor(
@@ -34,9 +54,35 @@ export class RequestHandler {
         try{
             switch(request.type) {
                 case "REGISTER_USER":
-            }
-        } catch(error) {
+                    return await this.handleRegisterUser(request);
+                
+                case "PLACE_ORDER":
+                    return await this.handlePlaceOrder(request);
 
+                case "CLOSE_ORDER":
+                    return await this.handleCloseOrder(request);
+                
+                case "GET_BALANCE":
+                    return await this.handleGetBalance(request);
+                
+                case "GET_ORDER":
+                    return await this.handleGetOrder(request);
+
+                case "GET_USER_ORDERS":
+                    return await this.handleGetUserOrders(request);
+
+                default:
+                    return createErrorResponse(
+                        request.requestId,
+                        `Unknowm request type: ${request.type}`
+                    );
+            }
+        } catch(error: any) {
+            console.error(`Error handling request ${request.requestId}:`, error);
+            return createErrorResponse(
+                request.requestId,
+                error.message || "Internal error processing request"
+            );
         }
     }
 
@@ -136,9 +182,216 @@ export class RequestHandler {
         // One question --> isValidPrice and isValidQuantity coming from price-utils but isValidLeverage is coming from utils/liquidation ? Should we move isValidLeverage to price-utils for consistency?
 
         // Calculate Volume and Margin
+        const volumeInt = qtyInt; // User provides volume directly.
+        const marginInt = calculateRequiredMargin(volumeInt, executionPriceInt, leverage );
 
+        // Check sufficient balance 
+        if(!this.state.hasSufficientBalance(userId, marginInt)) {
+            const userBalance = this.state.getBalance(userId);
+            return createErrorResponse(
+                requestId,
+                `${ErrorCode.INSUFFICIENT_BALANCE}: Required ${formatPrice(marginInt)}, available ${formatPrice(userBalance)}`
+            );
+        }
+
+        // Calculate liquidation price
+        const liquidationPriceInt = calculateLiquidationPrice(
+            executionPriceInt,
+            leverage,
+            orderType,
+            90 // 90% margin loss threshold
+        );
+
+        // Create order
+        const orderId = `ord_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        const order = {
+            orderId,
+            status: "OPEN" as const,
+            orderType,
+            asset,
+            leverage,
+            marginInt,
+            executionPriceInt,
+            qtyInt: volumeInt,
+            stopLossInt: stopLoss ? toInteger(stopLoss) : 0n,
+            takeProfitInt: takeProfit ? toInteger(takeProfit) : 0n,
+            liquidationPriceInt,
+            createdAt: new Date(),
+            finalPnLInt: 0n,
+            userId
+        };
+
+        // Update State: deduct margin and add order
+        const currentBalance = this.state.getBalance(userId);
+        const newBalance = subtract(currentBalance, marginInt);
+
+        this.state.updateBalance(userId, newBalance);
+        this.state.addOrder(order);
+
+        console.log(
+            `Order placed: ${orderId} | User: ${userId} | ${orderType} ${asset} | Leverage: ${leverage}x | Margin: ${formatPrice(marginInt)} | Liq Price: ${formatPrice(liquidationPriceInt)}`
+        );
+
+        return createSuccessResponse<PlaceOrderResponseData>(
+            requestId, {
+                order,
+                balance: {
+                    balanceInt: newBalance,
+                    userId
+                }
+            }
+        )
+    };
+
+
+    /**
+     * Handle CLOSE_ORDER request
+     */
+    private async handleCloseOrder(
+        request: StreamRequest<CloseOrderPayload> 
+    ): Promise<StreamResponse<CloseOrderResponseData>> {
+        const { userId, payload, requestId } = request;
+        const { orderId } = payload;
+
+        // Get order from state
+        const order = this.state.getOrder(orderId);
+        if (!order) {
+            return createErrorResponse(
+                requestId,
+                `${ErrorCode.ORDER_NOT_FOUND}: Order ${orderId} not found`
+            );
+        }
+
+        // Check ownership
+        if(order.userId !== userId) {
+            return createErrorResponse(
+                requestId,
+                `${ErrorCode.ORDER_NOT_FOUND}: Order not found or access denied`
+            );
+        }
+
+        // Check if already closed
+        if(order.status === "CLOSED") {
+            return createErrorResponse(
+                requestId,
+                `${ErrorCode.ORDER_ALREADY_CLOSED}: Order already closed`
+            )
+        }
+
+        // Get current price
+        const currData = await this.priceRedis.get(`market:${order.asset}`);
+        if(!currData) {
+            return createErrorResponse(
+                requestId,
+                `${ErrorCode.PRICE_DATA_UNAVAILABLE}: Price data not available`
+            );
+        }
+
+        const parsed = JSON.parse(currData);
+        const currentPrice = order.orderType === "LONG" ? parsed.bidPrice : parsed.askPrice;
+        // When an user is trying to close a "LONG" order, which means he is going short(selling) (Important) then we(the system) will look for bidPrice.
+        // Similarly, when an user is trying to close a "SHORT" order, which means he is going long(buying) then we(the system) will look for askPrice.
+
+        const currentPriceInt = toInteger(currentPrice);
+
+        // Calculate P&L
+        const PnLInt = calculateCurrentPnL(
+            currentPriceInt,
+            order.executionPriceInt,
+            order.qtyInt,
+            order.orderType
+        );
+
+        // Update state: close order and return margin + P&L
+        this.state.closeOrder(orderId, PnLInt);
+
+        const currentBalance = this.state.getBalance(userId);
+        const newBalance = add(add(currentBalance, order.marginInt), PnLInt);
+        this.state.updateBalance(userId, newBalance);
+
+        console.log(
+            `Order closed: ${orderId} | User: ${userId} | P&L: ${formatPrice(PnLInt)} | New Balance: ${formatPrice(newBalance)}`
+        );
+
+        const updatedOrder = this.state.getOrder(orderId)!;
+
+        return createSuccessResponse<CloseOrderResponseData>(requestId, {
+            order: updatedOrder,
+            balance: {
+                balanceInt: newBalance,
+                userId,
+            },
+            PnL : formatPrice(PnLInt),
+        });
     }
 
+    /**
+     * Handle GET_BALANCE request
+     */
+    private async handleGetBalance(
+        request: StreamRequest<GetBalancePayload>
+    ): Promise<StreamResponse<GetBalanceResponseData>> {
+        const { userId, requestId } = request;
 
+        const balanceInt = this.state.getBalance(userId);
+
+        return createSuccessResponse<GetBalanceResponseData>(requestId, {
+            balance: {
+                balanceInt,
+                userId,
+            },
+        });
+    }
+
+    /**
+     * Handle GET_ORDER request
+     */
+
+    private async handleGetOrder(
+        request: StreamRequest<GetOrderPayload>
+    ): Promise<StreamResponse<GetOrderResponseData>> {
+        const { userId, payload, requestId } = request;
+        const { orderId } = payload;
+
+        const order = this.state.getOrder(orderId);
+
+        if(!order) {
+            return createErrorResponse(
+                requestId,
+                `${ErrorCode.ORDER_NOT_FOUND}: Order not found`
+            );
+        }
+
+        // Check ownership
+        if(order.userId !== userId) {
+            return createErrorResponse(
+                requestId,
+                `${ErrorCode.ORDER_NOT_FOUND}: Order not found or access denied`
+            );
+        }
+
+        return createSuccessResponse<GetOrderResponseData>(requestId, {
+            order,
+        });
+    }
+
+    /**
+     * Handle GET_USERS_ORDERS request
+     */
+
+    private async handleGetUserOrders(
+        request: StreamRequest<GetUserOrdersPayload>
+    ): Promise<StreamResponse<GetUserOrdersResponseData>> {
+        const { userId, payload, requestId } = request;
+        const { status } = payload;
+
+        const orders = this.state.getUserOrders(userId, status);
+
+        return createSuccessResponse<GetUserOrdersResponseData>(requestId, {
+            orders,
+            count: orders.length,
+        });
+    }
 }
+
 

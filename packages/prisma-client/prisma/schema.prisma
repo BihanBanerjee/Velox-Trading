@@ -74,3 +74,14 @@ model Trade {
   @@index([time])
   @@map("trades")
 }
+
+model Snapshot {
+  id              String          @id @default(uuid())
+  timestamp       DateTime        @default(now())
+  lastStreamId    String          // Last processed Redis stream entry ID
+  data            Json            // Serialized state (users, orders, balances)
+  createdAt       DateTime        @default(now())
+
+  @@index([timestamp])
+  @@map("snapshots")
+}

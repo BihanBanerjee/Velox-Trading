@@ -78,27 +78,3 @@ export function formatPrice(priceInt: bigint, decimals: number = 8): string {
     const decimal = toDecimal(priceInt);
     return decimal.toFixed(decimals);
 }
-
-// Parse string price to integer
-// export function parseprice(priceStr: string): bigint {
-//     const decimal = parseFloat(priceStr);
-//     if (isNaN(decimal)) {
-//         throw new Error(`Invalid price string: ${priceStr}`);
-//     }
-//     return toInteger(decimal);
-// }
-
-// Validate that a BigInt is a valid price (positive)
-export function isValidPrice(priceInt: bigint): boolean {
-    return priceInt > 0n;
-}
-
-// Validate that a BigInt is a valid quantity (positive)
-export function isValidQuantity(qtyInt: bigint): boolean {
-    return qtyInt > 0n;
-}
-
-// Check if balance is sufficient for margin requirement
-// export function hasSufficientBalance(balanceInt: bigint, marginInt: bigint): boolean {
-//     return balanceInt >= marginInt;
-// }

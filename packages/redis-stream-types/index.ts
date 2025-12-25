@@ -160,29 +160,12 @@ export interface UserState {
     orders: string[]; // Array of order IDs
 }
 
-export interface OrderState {
-    orderId: string;
-    status: OrderStatus;
-    orderType: OrderType;
-    asset: Asset;
-    leverage: number;
-    marginInt: bigint;
-    executionPriceInt: bigint;
-    qtyInt: bigint;
-    stopLossInt: bigint;
-    takeProfitInt: bigint;
-    liquidationPriceInt: bigint;
-    createdAt: Date;
-    finalPnLInt: bigint;
-    userId: string;
-}
-
 export interface StateSnapshot {
     snapshotId: string;
     timestamp: number;
     lastStreamId: string; // Last processed Redis Stream ID
     users: Record<string, UserState>; // userdId -> UserState
-    orders: Record<string, OrderState>; // orderId -> OrderState
+    orders: Record<string, OrderData>; // orderId -> OrderState
 }
 
 

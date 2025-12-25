@@ -7,12 +7,12 @@
 
 import type { Asset, OrderStatus } from "@exness/prisma-client";
 import { formatPrice } from "@exness/price-utils";
-import type { OrderState, StateSnapshot, UserState } from "@exness/redis-stream-types";
+import type { OrderData, StateSnapshot, UserState } from "@exness/redis-stream-types";
 
 export class StateManager {
     // In-memory state
     private users: Map<string, UserState> = new Map();
-    private orders: Map<string, OrderState > = new Map();
+    private orders: Map<string, OrderData > = new Map();
 
     // Snapshot tracking
     private lastSnapshotTime: number = 0;
@@ -88,7 +88,7 @@ export class StateManager {
     /**
      * Get order by ID
      */
-    getOrder(orderId: string): OrderState | undefined {
+    getOrder(orderId: string): OrderData | undefined {
         return this.orders.get(orderId);
     }
 
@@ -96,7 +96,7 @@ export class StateManager {
      * Add new order to state
      */
 
-    addOrder(order: OrderState): void {
+    addOrder(order: OrderData): void {
         this.orders.set(order.orderId, order);
 
         // Add order ID to user's order list
@@ -109,7 +109,7 @@ export class StateManager {
     /**
      * Update order state
      */
-    updateOrder(orderId: string, updates: Partial<OrderState>): void {
+    updateOrder(orderId: string, updates: Partial<OrderData>): void {
         const order = this.orders.get(orderId);
         if (order) {
             Object.assign(order, updates);
@@ -131,14 +131,14 @@ export class StateManager {
      * Get all orders for a user
      */
 
-    getUserOrders(userId: string, statusFilter?: OrderStatus): OrderState[] { // OrdeStatus allows "Liquidated" also, we are not supposed to get closed or liquidated orders from here, we have a separate db worker for that."
+    getUserOrders(userId: string, statusFilter?: OrderStatus): OrderData[] { // OrdeStatus allows "Liquidated" also, we are not supposed to get closed or liquidated orders from here, we have a separate db worker for that."
         const user = this.users.get(userId);
         if(!user) return [];
 
         // user.orders is an array of Order IDs.
         const userOrders = user.orders
         .map((orderId) => this.orders.get(orderId)) // Retrieving the actual orders from the in-memory orders map using the orderIds.
-        .filter((order): order is OrderState => order !== undefined); // Type guard to ensure we only keep defined orders.
+        .filter((order): order is OrderData => order !== undefined); // Type guard to ensure we only keep defined orders.
 
         if(statusFilter) {
             return userOrders.filter((order) => order.status === statusFilter);
@@ -150,8 +150,8 @@ export class StateManager {
     /**
      * Get all open orders for a specific asset
      */
-    getOpenOrdersByAsset(asset: Asset): OrderState[] {
-        const openOrders: OrderState[] = [];
+    getOpenOrdersByAsset(asset: Asset): OrderData[] {
+        const openOrders: OrderData[] = [];
 
         for(const order of this.orders.values()) {
             if(order.status === "OPEN" && order.asset === asset) {
@@ -165,8 +165,8 @@ export class StateManager {
     /**
      * Get all open orders
      */
-    getAllOpenOrders(): OrderState[] {
-        const openOrders: OrderState[] = [];
+    getAllOpenOrders(): OrderData[] {
+        const openOrders: OrderData[] = [];
 
         for (const order of this.orders.values()) {
             if(order.status === "OPEN") {
@@ -193,7 +193,7 @@ export class StateManager {
             orders: {},
         }
 
-        // Seralize users
+        // Serialize users
         for (const [userId, user] of this.users.entries()) {
             snapshot.users[userId] = { ...user };
         }
@@ -329,5 +329,5 @@ export class StateManager {
     this.lastSnapshotId = "0-0";
     this.lastProcessedStreamId = "0-0";
   }
-  
+
 } 

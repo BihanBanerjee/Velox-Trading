@@ -10,7 +10,10 @@
  */
 
 import redisClient from "@exness/redis-client";
-import type { StateManager } from "./src/state/StateManager";
+import { StateManager } from "./src/state/StateManager";
+import { RequestHandler } from "./src/handlers/RequestHandlers";
+import { SnapshotManager } from "./src/persistence/SnapshotManager";
+import { PriceMonitor } from "./src/monitoring/PriceMonitor";
 
 
 // -----------------------------Configuration-----------------------------
@@ -22,3 +25,28 @@ const SNAPSHOT_INTERVAL_MS = 15000; // 15 seconds
 // -----------------------------Global State-----------------------------
 
 let state: StateManager;
+let requestHandler: RequestHandler;
+let snapshotManager: SnapshotManager;
+let priceMonitor: PriceMonitor;
+let snapshotTimer: NodeJS.Timeout | null = null;
+let currentStreamId = "0-0";
+
+// ------------------------------Initialization-------------------------------
+
+/**
+ * Initialize the engine - load snapshot and replay events
+ */
+
+async function initialize (): Promise<void> {
+    console.log("==".repeat(60));
+    console.log("Liquidation Engine Starting.....");
+    console.log("=".repeat(60));
+
+    // Initialize components
+    state = new StateManager();
+    requestHandler = new RequestHandler(state);
+    snapshotManager = new SnapshotManager(state);
+    priceMonitor = new PriceMonitor(state);    
+    
+    
+}
