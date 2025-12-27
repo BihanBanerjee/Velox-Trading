@@ -187,6 +187,9 @@ async function initialize (): Promise<void> {
     // Display initial state
     state.logState();
 
+    // Set status to READY - HTTP Server can now accept requests
+    await setEngineStatus(EngineStatus.READY, "Engine initialized and ready to process requests")
+
     console.log("\nEngine initialized successfully!");
     console.log("=".repeat(60));
 }

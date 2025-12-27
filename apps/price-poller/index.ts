@@ -37,7 +37,7 @@ async function main () {
             }
 
             // Honest price data for database storage(candlestick charts)
-            let honesPriceData = {
+            let honestPriceData = {
                 price: originalPrice,
                 quantity: quantity,
                 timestamp: payload.T,
@@ -74,7 +74,7 @@ async function main () {
                 BATCH_UPLOADER_STREAM,
                 "*",
                 "data",
-                JSON.stringify(honesPriceData)
+                JSON.stringify(honestPriceData)
             );
             console.log(`Added honest prices to Redis stream: ${BATCH_UPLOADER_STREAM}`);
                         

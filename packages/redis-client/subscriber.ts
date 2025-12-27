@@ -15,8 +15,8 @@ export class RedisSubscriber {
     private isRunning: boolean = false;
 
     constructor() {
-        const host = process.env.REDIS_HOST || "redis";
-        const port = Number(process.env.REDIS_PORT || 6379);
+        const host = process.env.REDIS_HOST || "localhost";
+        const port = Number(process.env.REDIS_PORT || 6380);
         this.client = new Redis({ host, port });
         this.callbacks = {};
     }
@@ -33,6 +33,13 @@ export class RedisSubscriber {
         }
 
         this.isRunning = true;
+
+        // Start runLoop in background (don't wait - it's an infinite loop)
+        // Catch any startup errors an log them
+        this.runLoop().catch((error) => {
+            console.error("[SUBSCRIBER] Fatal error in runLoops:", error);
+            this.isRunning = false;
+        })
 
         console.log("[SUBSCRIBER] Started");
     }

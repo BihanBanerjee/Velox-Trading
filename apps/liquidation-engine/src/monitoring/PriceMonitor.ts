@@ -122,7 +122,7 @@ export class PriceMonitor {
         // Return margin + P&L to user balance
         const currentBalance = this.state.getBalance(order.userId);
         const newBalance = add(add(currentBalance, order.marginInt), pnlInt)
-        this.state.updateBalance(order.orderId, newBalance);
+        this.state.updateBalance(order.userId, newBalance);
 
         console.log(
             `Order ${orderId} liquidated | User: ${order.userId} | Reason: ${reason} | P&L: ${formatPrice(pnlInt)} | New Balance: ${formatPrice(newBalance)}`

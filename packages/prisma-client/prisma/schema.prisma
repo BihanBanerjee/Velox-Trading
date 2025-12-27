@@ -40,20 +40,20 @@ model User {
 
 
 model ClosedOrder {
-  orderId         String        @id
-  userId          String
-  asset           Asset
-  orderType       OrderType
-  leverage        Int
-  marginInt       BigInt
-  executionPoint  BigInt
-  closePriceInt   BigInt
-  qtyInt          BigInt
-  stopLossInt     BigInt
-  takeProfitInt   BigInt
-  finalPnLInt     BigInt
-  createdAt       DateTime
-  closedAt        DateTime
+  orderId            String        @id
+  userId             String
+  asset              Asset
+  orderType          OrderType
+  leverage           Int
+  marginInt          BigInt
+  executionPriceInt  BigInt
+  closePriceInt      BigInt
+  qtyInt             BigInt
+  stopLossInt        BigInt
+  takeProfitInt      BigInt
+  finalPnLInt        BigInt
+  createdAt          DateTime
+  closedAt           DateTime
 
   @@index([userId, closedAt])
   @@index([closedAt])

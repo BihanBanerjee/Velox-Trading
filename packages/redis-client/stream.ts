@@ -8,10 +8,6 @@ import Redis from "ioredis";
 import type { StreamRequest, StreamResponse } from "@exness/redis-stream-types";
 import { serializeForStream } from "@exness/redis-stream-types";
 
-
-
-const DEFAULT_TIMEOUT = 5000; // 5 seconds
-const BLOCK_MS = 1000; // Block for 1 second when reading from the stream
 const MAX_STREAM_LENGTH = 100000; // Event replay safety limit (previously was 10000)
 
 /**
@@ -93,6 +89,22 @@ export async function publishResponse(
 }
 
 /**
+ * Get the latest stream ID (for initializing snapshot tracking)
+ */
+export async function getLatestStreamId(
+    client: Redis,
+    streamName: string
+): Promise<string> {
+    const result = await client.xrevrange(streamName, "+", "-", "COUNT", "1");
+
+    if(result && result.length > 0 && result[0] && result[0][0]) {
+        return result[0][0]; // Return the stream ID.
+    }
+
+    return "0-0" // No entries yet.
+}
+
+/**
  * Publish a response to the callback queue (for subscriber pattern)
  * This is more efficient than publishing to a stream for transient responses
  * 
@@ -126,21 +138,4 @@ export async function publishResponseToQueue(
     }
 
     return streamId;
-}
-
-
-/**
- * Get the latest stream ID (for initializing snapshot tracking)
- */
-export async function getLatestStreamId(
-    client: Redis,
-    streamName: string
-): Promise<string> {
-    const result = await client.xrevrange(streamName, "+", "-", "COUNT", "1");
-
-    if(result && result.length > 0 && result[0] && result[0][0]) {
-        return result[0][0]; // Return the stream ID.
-    }
-
-    return "0-0" // No entries yet.
 }
