@@ -5,13 +5,15 @@
   "private": true,
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/ws": "^8.18.1"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "dependencies": {
-    "ws": "^8.18.3",
-    "@exness/redis-client": "*"
+    "@exness/redis-client": "*",
+    "jsonwebtoken": "^9.0.3",
+    "ws": "^8.18.3"
   }
 }
