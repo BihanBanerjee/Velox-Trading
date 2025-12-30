@@ -15,5 +15,8 @@
     "@exness/redis-client": "*",
     "@exness/redis-stream-types": "*",
     "ioredis": "^5.8.2"
+  },
+  "scripts": {
+    "start": "bun run index.ts"
   }
 }

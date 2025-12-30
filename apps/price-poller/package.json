@@ -18,5 +18,8 @@
     "@exness/redis-client": "*",
     "@exness/redis-stream-types": "*",
     "ws": "^8.18.3"
+  },
+  "scripts": {
+    "start": "bun run index.ts"
   }
 }

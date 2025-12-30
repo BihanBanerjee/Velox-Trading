@@ -21,12 +21,8 @@ const setAuthCookie = (res: Response, token: string) => {
 
 export const signup = async (req: Request, res: Response) => {
     try {
+        // Validation is handled by Zod middleware
         const { email, phone, password } = req.body;
-        if(!email || !phone || !password) {
-            return res.status(400).json({
-                message: "All fields are required"
-            })
-        }
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -87,12 +83,8 @@ export const signup = async (req: Request, res: Response) => {
 
 export const signin = async (req: Request, res: Response) => {
     try {
+        // Validation is handled by Zod middleware
         const {email, password} = req.body;
-        if (!email || !password) {
-            return res.status(400).json({
-                message: "All fields are required"
-            })
-        }
 
         const user = await prisma.user.findUnique({
             where: {

@@ -13,29 +13,19 @@ interface CandleData {
 export const getCandles = async (req: Request, res: Response) => {
   try {
     const { asset, duration } = req.query;
-    
-    // Validate required parameters
-    if (!asset || !duration) {
-      return res.status(400).json({ 
-        error: "Missing required parameters: asset, duration" 
-      });
-    }
+
+    // Validation is handled by Zod middleware
 
     // Map duration to TimescaleDB materialized view
     const viewMap: Record<string, string> = {
       '1m': 'trades_1m',
       '2m': 'trades_2m',
-      '5m': 'trades_5m', 
+      '5m': 'trades_5m',
       '10m': 'trades_10m',
       '1d': 'trades_1d'
     };
 
     const tableName = viewMap[duration as string];
-    if (!tableName) {
-      return res.status(400).json({ 
-        error: "Invalid duration. Supported: 1m, 2m, 5m, 10m, 1d" 
-      });
-    }
 
     // Convert asset to symbol format (e.g., "BTC" -> "BTCUSDT")
     const symbol = (asset as string).toUpperCase();

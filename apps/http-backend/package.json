@@ -23,6 +23,10 @@
     "@exness/prisma-client": "*",
     "@exness/redis-client": "*",
     "@exness/redis-stream-types": "*",
-    "@exness/price-utils": "*"
+    "@exness/price-utils": "*",
+    "@exness/validation": "*"
+  },
+  "scripts": {
+    "start": "bun run index.ts"
   }
 }

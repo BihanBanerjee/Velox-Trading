@@ -14,5 +14,8 @@
     "@exness/prisma-client": "*",
     "@exness/redis-stream-types": "*",
     "@exness/price-utils": "*"
+  },
+  "scripts": {
+    "start": "bun run index.ts"
   }
 }

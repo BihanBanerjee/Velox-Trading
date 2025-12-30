@@ -14,12 +14,12 @@ import { StateManager } from "./src/state/StateManager";
 import { RequestHandler } from "./src/handlers/RequestHandlers";
 import { SnapshotManager } from "./src/persistence/SnapshotManager";
 import { PriceMonitor } from "./src/monitoring/PriceMonitor";
-import { STREAMS, ENGINE_STATUS_KEY, EngineStatus } from "@exness/redis-stream-types";
+import { STREAMS, ENGINE_STATUS_KEY, EngineStatus, deserializeFromStream } from "@exness/redis-stream-types";
 import type { StreamRequest, EngineStatusData } from "@exness/redis-stream-types";
-import { 
-    getLatestStreamId, 
-    publishResponse, 
-    publishResponseToQueue 
+import {
+    getLatestStreamId,
+    publishResponse,
+    publishResponseToQueue
 } from "@exness/redis-client/stream";
 import { RESPONSE_QUEUE } from "@exness/redis-client/subscriber";
 import { prisma } from "@exness/prisma-client";
@@ -156,9 +156,9 @@ async function initialize (): Promise<void> {
                       type: messageType as any,
                       userId: fieldMap.userId,
                       timestamp: parseInt(fieldMap.timestamp),
-                      payload: JSON.parse(fieldMap.payload),
+                      payload: deserializeFromStream(fieldMap.payload),
                     };
-        
+
                     console.log(`Replaying request ${request.requestId} from ${streamId}`);
                     await requestHandler.handleRequest(request);
                     currentStreamId = streamId;
@@ -273,7 +273,7 @@ async function startUnifiedStreamConsumer(): Promise<void> {
                             console.log(`[Price Update] ${symbol}: Bid $${bidPrice.toFixed(2)} | Ask $${askPrice.toFixed(2)}`);
                         } else {
                             // Handle order request
-                            if (!fieldMap.requestId || !fieldMap.userId || !fieldMap.timestamp || !fieldMap.payload) {
+                            if (!fieldMap.type || !fieldMap.requestId || !fieldMap.userId || !fieldMap.timestamp || !fieldMap.payload) {
                                 console.error("Missing required fields for order request");
                                 continue;
                             }
@@ -282,7 +282,7 @@ async function startUnifiedStreamConsumer(): Promise<void> {
                                 type: messageType as any,
                                 userId: fieldMap.userId,
                                 timestamp: parseInt(fieldMap.timestamp),
-                                payload: JSON.parse(fieldMap.payload),
+                                payload: deserializeFromStream(fieldMap.payload),
                             }
 
                             console.log(

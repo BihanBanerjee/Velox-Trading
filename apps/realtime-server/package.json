@@ -15,5 +15,8 @@
     "@exness/redis-client": "*",
     "jsonwebtoken": "^9.0.3",
     "ws": "^8.18.3"
+  },
+  "scripts": {
+    "start": "bun run index.ts"
   }
 }

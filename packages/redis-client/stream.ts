@@ -23,7 +23,7 @@ export async function publishRequest(
     streamName: string,
     request: StreamRequest,
 ): Promise<string> {
-    const serialized = serializeForStream(request);
+    const serializedPayload = serializeForStream(request.payload);
 
     /**
      * XADD command: Add entry to stream with auto-generated ID (*)
@@ -34,15 +34,23 @@ export async function publishRequest(
      * 0 = Sequence number (increments if multiple entries are added in the same millisecond)
      * The "*" tells Redis to auto-generate a unique stream ID using the current timestamp.
      */
-    
-    const streamId = await client.xadd( 
+
+    const streamId = await client.xadd(
         streamName,
         "MAXLEN",
         "~",
         MAX_STREAM_LENGTH.toString(),
         "*",
-        "data",
-        serialized   
+        "type",
+        request.type,
+        "requestId",
+        request.requestId,
+        "userId",
+        request.userId,
+        "timestamp",
+        request.timestamp.toString(),
+        "payload",
+        serializedPayload
     );
     // return streamId!; --> it could hav been a solution. But this is the better one.
      if (!streamId) {

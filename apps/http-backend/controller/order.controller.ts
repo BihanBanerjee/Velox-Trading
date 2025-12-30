@@ -91,25 +91,8 @@ export const openOrder = async(req: authRequest, res: Response) => {
             stopLoss?: number;
             takeProfit?: number;
         } = req.body;
-        // Basic Validation
-        if(!orderType || !asset || !leverage || !qty) {
-            return res.status(400).json({
-                error: "Missing required fields: orderType, asset, leverage, qty"
-            });
-        }
 
-        if(!["LONG", "SHORT"].includes(orderType)) {
-            return res.status(400).json({
-                error: "Invalid order type (must be LONG or SHORT)"
-            });
-        }
-
-        if(!["BTCUSDT", "ETHUSDT", "SOLUSDT"].includes(asset)) {
-            return res.status(400).json({
-                error: "Invalid asset"
-            });
-        }
-
+        // Validation is handled by Zod middleware
         // Send request to the engine
         const response = await engineClient.placeOrder(user.id, {
             orderType,
@@ -282,13 +265,7 @@ export const getUserOrders = async (req: authRequest, res: Response) => {
 
         const { status } = req.query;
 
-        // Validate status if provided
-        if(status && !["OPEN", "CLOSED"].includes(status as string)) {
-            return res.status(400).json({
-                error: "Invalid status (must be OPEN or CLOSED)"
-            });
-        }
-
+        // Validation is handled by Zod middleware
         // Send request to engine
         const response = await engineClient.getUserOrders(
             user.id,

@@ -182,31 +182,35 @@ ExnessRedoMine/
    ```
 
 5. **Start all services**
+
+   **Option A: Automatic Sequential Startup (Recommended)**
+   ```bash
+   bun run start:all
+   ```
+   This will start all services in the correct order automatically.
+
+   **Option B: Manual Startup in Separate Terminals**
    ```bash
    # Terminal 1: Price Poller
-   cd apps/price-poller
-   bun run index.ts
+   turbo run start --filter=@exness/price-poller
 
-   # Terminal 2: Liquidation Engine
-   cd apps/liquidation-engine
-   bun run index.ts
+   # Terminal 2: Liquidation Engine (wait 3s)
+   turbo run start --filter=liquidation-engine
 
-   # Terminal 3: Batch Uploader
-   cd apps/batch-uploader
-   bun run index.ts
+   # Terminal 3: Batch Uploader (wait 5s)
+   turbo run start --filter=@exness/batch-uploader
 
-   # Terminal 4: DB Worker
-   cd apps/db-worker
-   bun run index.ts
+   # Terminal 4: DB Worker (wait 2s)
+   turbo run start --filter=db-worker
 
-   # Terminal 5: Realtime Server
-   cd apps/realtime-server
-   bun run index.ts
+   # Terminal 5: Realtime Server (wait 2s)
+   turbo run start --filter=realtime-server
 
-   # Terminal 6: HTTP Backend
-   cd apps/http-backend
-   bun run index.ts
+   # Terminal 6: HTTP Backend (wait 2s)
+   turbo run start --filter=@exness/http-backend
    ```
+
+   See [STARTUP-GUIDE.md](STARTUP-GUIDE.md) for detailed startup order explanation.
 
 ### Quick Start (Development)
 
