@@ -5,8 +5,8 @@
   "private": true,
   "dependencies": {
     "@exness/redis-client": "*",
+    "@exness/redis-stream-types": "*",
     "@exness/prisma-client": "*",
-    "@exness/price-poller": "*",
     "@exness/price-utils": "*"
   },
   "devDependencies": {

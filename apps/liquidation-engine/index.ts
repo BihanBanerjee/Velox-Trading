@@ -28,6 +28,8 @@ import { prisma } from "@exness/prisma-client";
 // -----------------------------Configuration-----------------------------
 
 const SNAPSHOT_INTERVAL_MS = 15000; // 15 seconds
+const CLEANUP_INTERVAL_MS = 60000; // 1 minute - cleanup old closed orders
+const CLOSED_ORDER_RETENTION_MS = 60000; // 1 minute - keep closed orders in memory for this long
 
 // -----------------------------Global State-----------------------------
 
@@ -36,6 +38,7 @@ let requestHandler: RequestHandler;
 let snapshotManager: SnapshotManager;
 let priceMonitor: PriceMonitor;
 let snapshotTimer: NodeJS.Timeout | null = null;
+let cleanupTimer: NodeJS.Timeout | null = null;
 let currentStreamId = "0-0";
 
 
@@ -330,6 +333,31 @@ function startPeriodicSnapshots(): void {
     );
 }
 
+// ----------------------------------- Memory Cleanup ----------------------------------------
+
+/**
+ * Start periodic cleanup of old closed orders
+ * This prevents memory from growing indefinitely with historical orders
+ * Closed orders are safely removed after db-worker has had time to persist them
+ */
+function startPeriodicCleanup(): void {
+    console.log(`\nStarting periodic cleanup (every ${CLEANUP_INTERVAL_MS}ms)`);
+    console.log(`  └─ Closed orders retained for: ${CLOSED_ORDER_RETENTION_MS}ms\n`);
+
+    cleanupTimer = setInterval(() => {
+        try {
+            const removedCount = state.cleanupOldClosedOrders(CLOSED_ORDER_RETENTION_MS);
+
+            if (removedCount > 0) {
+                const stats = state.getStats();
+                console.log(`[Memory] After cleanup: ${stats.totalOrders} total orders (${stats.openOrders} open, ${stats.closedOrders} closed)`);
+            }
+        } catch (error) {
+            console.error("[Cleanup] Error during periodic cleanup:", error);
+        }
+    }, CLEANUP_INTERVAL_MS);
+}
+
 // ------------------------------------ Lifecycle Management -----------------------------------------------
 /**
  * Graceful shutdown
@@ -345,6 +373,12 @@ async function shutdown(signal: string): Promise<void> {
     // Stop periodic snapshots
     if(snapshotTimer) {
         snapshotManager.stopPeriodicSnapshots(snapshotTimer);
+    }
+
+    // Stop periodic cleanup
+    if(cleanupTimer) {
+        clearInterval(cleanupTimer);
+        console.log("Stopped periodic cleanup");
     }
 
     // Create final snapshot
@@ -394,6 +428,9 @@ async function main(): Promise<void> {
 
         // Start periodic snapshots
         startPeriodicSnapshots();
+
+        // Start periodic cleanup of old closed orders
+        startPeriodicCleanup();
 
         // Log stats every 60 seconds
         setInterval(() => {

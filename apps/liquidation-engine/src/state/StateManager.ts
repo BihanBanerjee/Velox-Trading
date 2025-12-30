@@ -128,6 +128,78 @@ export class StateManager {
     }
 
     /**
+     * Remove a closed/liquidated order from memory
+     * Called after db-worker has had time to persist the order
+     */
+    removeClosedOrder(orderId: string): boolean {
+        const order = this.orders.get(orderId);
+        if (!order) {
+            return false;
+        }
+
+        // Only remove orders that are closed or liquidated
+        if (order.status !== "CLOSED" && order.status !== "LIQUIDATED") {
+            console.warn(`Cannot remove order ${orderId}: status is ${order.status}, not CLOSED/LIQUIDATED`);
+            return false;
+        }
+
+        // Remove from orders map
+        this.orders.delete(orderId);
+
+        // Remove from user's order list
+        const user = this.users.get(order.userId);
+        if (user) {
+            const initialLength = user.orders.length;
+            user.orders = user.orders.filter(id => id !== orderId);
+
+            if (user.orders.length === initialLength) {
+                console.warn(`Order ${orderId} was not in user ${order.userId}'s order list`);
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Clean up closed/liquidated orders older than retentionMs
+     * This prevents memory from growing indefinitely with historical orders
+     * Safe to call periodically - only removes orders that db-worker has had time to persist
+     *
+     * @param retentionMs How long to keep closed orders in memory (default: 60000ms = 1 minute)
+     * @returns Number of orders removed
+     */
+    cleanupOldClosedOrders(retentionMs: number = 60000): number {
+        const now = Date.now();
+        let removedCount = 0;
+        const ordersToRemove: string[] = [];
+
+        // First pass: identify orders to remove
+        for (const [orderId, order] of this.orders.entries()) {
+            if (order.status === "CLOSED" || order.status === "LIQUIDATED") {
+                const orderAge = now - new Date(order.createdAt).getTime();
+
+                // Remove if order is older than retention period
+                if (orderAge > retentionMs) {
+                    ordersToRemove.push(orderId);
+                }
+            }
+        }
+
+        // Second pass: remove identified orders
+        for (const orderId of ordersToRemove) {
+            if (this.removeClosedOrder(orderId)) {
+                removedCount++;
+            }
+        }
+
+        if (removedCount > 0) {
+            console.log(`[Cleanup] Removed ${removedCount} old closed/liquidated orders from memory`);
+        }
+
+        return removedCount;
+    }
+
+    /**
      * Get all orders for a user
      */
 

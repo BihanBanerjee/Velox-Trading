@@ -1,1 +1,0 @@
-export const BATCH_UPLOADER_STREAM = "binance_trades_stream";

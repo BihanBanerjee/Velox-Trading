@@ -1,6 +1,5 @@
 import redisClient from "@exness/redis-client";
 import WebSocket from "ws";
-import { BATCH_UPLOADER_STREAM } from "./config";
 import { STREAMS, createPriceUpdate, serializeForStream } from "@exness/redis-stream-types";
 
 const SUPPORTED_PAIRS = ["btcusdt", "solusdt", "ethusdt"];
@@ -36,23 +35,21 @@ async function main () {
                 ask: originalPrice * (1 + SPREAD_PERCENTAGE), // Higher for user buys.
             }
 
-            // Honest price data for database storage(candlestick charts)
-            let honestPriceData = {
-                price: originalPrice,
-                quantity: quantity,
-                timestamp: payload.T,
-                symbol: payload.s
-            };
-
             // Convert manipulated bid/ask prices to integer format (price * 100,000,000)
             const bidPriceInt = BigInt(Math.round(manipulatedPrice.bid * 100_000_000));
             const askPriceInt = BigInt(Math.round(manipulatedPrice.ask * 100_000_000));
 
-            // Create price update message for liquidation engine with both bid and ask
+            // Convert honest price and quantity to integer format for historical data
+            const honestPriceInt = BigInt(Math.round(originalPrice * 100_000_000));
+            const honestQtyInt = BigInt(Math.round(quantity * 100_000_000));
+
+            // Create enriched price update message with both manipulated (for liquidation) and honest (for database) data
             const priceUpdateMessage = createPriceUpdate(
                 payload.s,
-                bidPriceInt, // Real bid price
-                askPriceInt, // Real ask price
+                bidPriceInt,
+                askPriceInt,
+                honestPriceInt,
+                honestQtyInt,
                 payload.T
             );
 
@@ -79,15 +76,6 @@ async function main () {
                 timestamp: payload.T
             });
             await redisClient.publish(`market:${payload.s}`, realtimePriceData);
-
-            // Stream HONEST prices for database storage (candlestick charts)
-            await redisClient.xadd(
-                BATCH_UPLOADER_STREAM,
-                "*",
-                "data",
-                JSON.stringify(honestPriceData)
-            );
-            console.log(`Added honest prices to Redis stream: ${BATCH_UPLOADER_STREAM}`);
                         
         } catch (error) {
             console.error("Error processing message: ", error);

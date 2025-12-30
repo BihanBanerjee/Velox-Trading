@@ -86,6 +86,8 @@ export interface PriceUpdatePayload {
     askPriceInt: bigint; // Ask price as integer (price * 100,000,000) - user buys at this price
     midPriceInt: bigint; // Mid price as integer (price * 100,000,000) - for reference
     timestamp: number // Unix timestamp in ms
+    honestPriceInt: bigint; // Original Binance price (no spread manipulation) for historical data
+    honestQtyInt: bigint; // Trade quantity from Binance for volume analytics
 }
 
 // ------------------------- Request Payloads ---------------------------------
@@ -222,6 +224,8 @@ export function createPriceUpdate(
     symbol: string,
     bidPriceInt: bigint,
     askPriceInt: bigint,
+    honestPriceInt: bigint,
+    honestQtyInt: bigint,
     timestamp?: number
 ): PriceUpdateMessage {
     // Calculate the mid-price for reference
@@ -235,6 +239,8 @@ export function createPriceUpdate(
             askPriceInt,
             midPriceInt,
             timestamp: timestamp || Date.now(),
+            honestPriceInt,
+            honestQtyInt,
         }
     }
 }

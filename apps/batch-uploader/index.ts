@@ -1,29 +1,17 @@
 import redisClient from "@exness/redis-client";
-import { BATCH_UPLOADER_STREAM, CONSUMER_GROUP, CONSUMER_NAME, BATCH_SIZE } from "./config";
+import { BATCH_SIZE } from "./config";
+import { STREAMS } from "@exness/redis-stream-types";
 import { processBatch } from "./processor";
 
 
-async function initializeConsumerGroup() {
-    try {
-        await redisClient.xgroup("CREATE", BATCH_UPLOADER_STREAM, CONSUMER_GROUP, "$", "MKSTREAM"); 
-        console.log("Consumer group created");
-        
-    } catch (error: any) {
-        if (error.message.includes("BUSYGROUP")) {
-            console.log("Consumer group already exists");
-        } else {
-            console.error("Error creating consumer group:", error);
-        }
-    }
-}
-
 async function main() {
-    await initializeConsumerGroup();
-
     console.log("Batch uploader started, waiting for data...");
 
+    // Track last processed message ID
+    let lastId = "$"; // Start from new messages
+
     // Cross-call batching variables
-    let messageBuffer: any[] = [];
+    let messageBuffer: [string, string[]][] = [];
     let lastFlushTime = Date.now();
 
     const TARGET_BATCH_SIZE = 100;
@@ -32,16 +20,23 @@ async function main() {
     while (true) {
         try {
             // Read messages from the stream
-            const messages = await redisClient.xreadgroup(
-                "GROUP", CONSUMER_GROUP, CONSUMER_NAME,
+            const messages = await redisClient.xread(
                 "COUNT", BATCH_SIZE,
                 "BLOCK", 1000, // Block for 1 second
-                "STREAMS", BATCH_UPLOADER_STREAM, ">"
-            ) as any;
+                "STREAMS", STREAMS.REQUEST, lastId
+            ) as [string, [string, string[]][]][] | null;
 
             if (messages && messages.length > 0) {
-                const streamData = messages[0][1]; // Array of [messageId, fields]
+                const stream = messages[0];
+                if (!stream) continue;
+
+                const streamData: [string, string[]][] = stream[1]; // Array of [messageId, fields]
                 console.log(`Received ${streamData.length} messages`);
+
+                // Update lastId to the ID of the last message received
+                const lastMessageId = streamData[streamData.length - 1]?.[0];
+                if (!lastMessageId) continue;
+                lastId = lastMessageId;
 
                 // Add to buffer instead of processing immediately
                 messageBuffer.push(...streamData);
@@ -56,13 +51,13 @@ async function main() {
 
                     // Process the accumulated batch
                     await processBatch(messageBuffer);
-                    
+
                     // Reset buffer and timer
                     messageBuffer = [];
                     lastFlushTime = Date.now();
                 }
-                
-                
+
+
             }
         } catch(error) {
             console.error("Error reading from stream:", error);

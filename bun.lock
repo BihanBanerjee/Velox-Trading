@@ -13,10 +13,10 @@
     "apps/batch-uploader": {
       "name": "@exness/batch-uploader",
       "dependencies": {
-        "@exness/price-poller": "*",
         "@exness/price-utils": "*",
         "@exness/prisma-client": "*",
         "@exness/redis-client": "*",
+        "@exness/redis-stream-types": "*",
       },
       "devDependencies": {
         "@types/bun": "latest",
