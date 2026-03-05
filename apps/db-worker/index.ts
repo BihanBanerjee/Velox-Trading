@@ -46,9 +46,11 @@ async function processCloseOrderResponse(
         ? order.executionPriceInt + pnlPerUnit
         : order.executionPriceInt - pnlPerUnit;
 
-        // Insert closed order into database.
-        await prisma.closedOrder.create({
-            data: {
+        // Upsert closed order into database (idempotent — safe on worker restart).
+        await prisma.closedOrder.upsert({
+            where: { orderId: order.orderId },
+            update: {}, // Already persisted, nothing to update
+            create: {
                 orderId: order.orderId,
                 userId: order.userId,
                 asset: order.asset as any, // Enum: BTCUSDT, ETHUSDT, SOLUSDT
@@ -61,6 +63,7 @@ async function processCloseOrderResponse(
                 stopLossInt: order.stopLossInt,
                 takeProfitInt: order.takeProfitInt,
                 finalPnLInt: order.finalPnLInt,
+                closeReason: order.closeReason || null,
                 createdAt: new Date(order.createdAt),
                 closedAt: new Date(),
             }
@@ -116,16 +119,11 @@ async function startResponseConsumer() {
                         if(fieldMap.data) {
                             const response = deserializeFromStream(fieldMap.data) as StreamResponse<any>;
 
-                            // Only process CLOSE_ORDER responses
-                            // Check if the responses has the expected structure for closed orders
-
-                            if(response.success && response.data && 'order' in response.data && 'balance' in response.data) {
+                            // Only process CLOSE_ORDER responses (not PLACE_ORDER which also has order + balance)
+                            // CloseOrderResponseData uniquely has a 'PnL' field that PlaceOrderResponseData does not
+                            if(response.success && response.data && 'order' in response.data && 'PnL' in response.data) {
                                 const closeOrderResponse = response as StreamResponse<CloseOrderResponseData>;
-
-                                // Check if order has finalPnLInt (indicator of a closed order)
-                                if(closeOrderResponse.data?.order?.finalPnLInt !== undefined) {
-                                    await processCloseOrderResponse(closeOrderResponse)
-                                }
+                                await processCloseOrderResponse(closeOrderResponse);
                             }
                         }
 

@@ -119,11 +119,12 @@ export class StateManager {
     /**
      * Close an order (update status and P&L)
      */
-    closeOrder(orderId: string, finalPnLInt: bigint): void {
+    closeOrder(orderId: string, finalPnLInt: bigint, closeReason?: "MANUAL" | "MARGIN_CALL" | "STOP_LOSS" | "TAKE_PROFIT"): void {
         const order = this.orders.get(orderId);
         if(order) {
-            order.status = "CLOSED";
+            order.status = closeReason && closeReason !== "MANUAL" ? "LIQUIDATED" : "CLOSED";
             order.finalPnLInt = finalPnLInt;
+            order.closeReason = closeReason;
         }
     }
 

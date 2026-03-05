@@ -143,6 +143,22 @@ export const getWsTicket = async (req: Request, res: Response) => {
     }
 }
 
+export const getMe = async (req: Request, res: Response) => {
+    const token = req.cookies?.token;
+    if (!token) {
+        return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+        const user = await prisma.user.findUnique({ where: { id: decoded.userId }, select: { id: true, email: true } });
+        if (!user) return res.status(404).json({ error: "User not found" });
+        return res.json({ user });
+    } catch {
+        return res.status(401).json({ error: "Invalid token" });
+    }
+}
+
 export const signout = async (req: Request, res: Response) => {
     res.clearCookie(
         "token", {

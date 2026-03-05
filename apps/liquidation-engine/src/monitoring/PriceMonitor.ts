@@ -117,7 +117,7 @@ export class PriceMonitor {
         }
 
         // Close the order
-        this.state.closeOrder(orderId, pnlInt);
+        this.state.closeOrder(orderId, pnlInt, reason);
 
         // Return margin + P&L to user balance
         const currentBalance = this.state.getBalance(order.userId);

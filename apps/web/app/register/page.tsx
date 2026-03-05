@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import api from "@/lib/axios";
 
 export default function Register() {
   const router = useRouter();
@@ -19,23 +20,10 @@ export default function Register() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/v1/user/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, phone: Number(phone), password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.message || "Registration failed");
-        return;
-      }
-
+      await api.post("/api/v1/user/signup", { email, phone: Number(phone), password });
       router.push("/trade");
-    } catch {
-      setError("Something went wrong. Please try again.");
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }

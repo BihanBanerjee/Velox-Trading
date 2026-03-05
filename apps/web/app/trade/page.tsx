@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createChart, CandlestickSeries, type IChartApi, type ISeriesApi, type CandlestickData, ColorType } from "lightweight-charts";
+import api from "@/lib/axios";
 
 // ─── Types ───────────────────────────────────────────────────────────
 type Asset = "BTCUSDT" | "ETHUSDT" | "SOLUSDT";
@@ -22,10 +23,20 @@ interface Order {
   leverage: number;
   margin: string;
   executionPrice: string;
-  qty: string;
-  currentPnL: string;
+  executionPriceInt: string;
+  qtyInt: string;
+  stopLossInt: string;
+  takeProfitInt: string;
+  finalPnLInt: string;
+  liquidationPrice: string;
   status: string;
   createdAt: string;
+  closeReason?: "MANUAL" | "MARGIN_CALL" | "STOP_LOSS" | "TAKE_PROFIT";
+}
+
+const SCALE = 100_000_000; // 10^8 — all BigInt prices/quantities are scaled by this
+function fromInt(val: string): number {
+  return parseInt(val, 10) / SCALE;
 }
 
 const ASSETS: { symbol: Asset; label: string; icon: string }[] = [
@@ -46,6 +57,9 @@ export default function TradePage() {
   const [prices, setPrices] = useState<Record<string, PriceData>>({});
   const prevPricesRef = useRef<Record<string, PriceData>>({});
   const [balance, setBalance] = useState<string>("0.00");
+  const [userEmail, setUserEmail] = useState<string>("");
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [closedOrders, setClosedOrders] = useState<Order[]>([]);
   const [positionTab, setPositionTab] = useState<"open" | "closed">("open");
@@ -82,15 +96,33 @@ export default function TradePage() {
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const isResizingRef = useRef(false);
 
+  // Resizable positions panel (drag vertically)
+  const PANEL_MIN = 120;
+  const PANEL_MAX = 500;
+  const [panelHeight, setPanelHeight] = useState(200);
+  const isResizingPanelRef = useRef(false);
+  const centerColumnRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizingRef.current) return;
-      const newWidth = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, e.clientX));
-      setSidebarWidth(newWidth);
+      if (isResizingRef.current) {
+        const newWidth = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, e.clientX));
+        setSidebarWidth(newWidth);
+      }
+      if (isResizingPanelRef.current && centerColumnRef.current) {
+        const rect = centerColumnRef.current.getBoundingClientRect();
+        const newHeight = Math.min(PANEL_MAX, Math.max(PANEL_MIN, rect.bottom - e.clientY));
+        setPanelHeight(newHeight);
+      }
     };
     const handleMouseUp = () => {
       if (isResizingRef.current) {
         isResizingRef.current = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      }
+      if (isResizingPanelRef.current) {
+        isResizingPanelRef.current = false;
         document.body.style.cursor = "";
         document.body.style.userSelect = "";
       }
@@ -103,14 +135,15 @@ export default function TradePage() {
     };
   }, []);
 
-  // Resize chart when sidebar width changes
+  // Resize chart when sidebar width or panel height changes
   useEffect(() => {
     if (chartRef.current && chartContainerRef.current) {
       chartRef.current.applyOptions({
         width: chartContainerRef.current.clientWidth,
+        height: chartContainerRef.current.clientHeight,
       });
     }
-  }, [sidebarWidth]);
+  }, [sidebarWidth, panelHeight]);
 
   // Toggle bid/ask price line visibility based on order type
   useEffect(() => {
@@ -131,9 +164,9 @@ export default function TradePage() {
     async function connect() {
       try {
         // Step 1: Get a one-time ticket from the backend
-        const res = await fetch("/api/v1/user/ws-ticket", { credentials: "include" });
-        if (!res.ok || cancelled) return;
-        const { ticket } = await res.json();
+        const { data } = await api.get("/api/v1/user/ws-ticket");
+        if (cancelled) return;
+        const { ticket } = data;
 
         // Step 2: Connect to WebSocket
         ws = new WebSocket("ws://localhost:3006");
@@ -205,34 +238,49 @@ export default function TradePage() {
     };
   }, []);
 
+  // ─── Fetch user info ───────────────────────────────────────────────
+  useEffect(() => {
+    api.get("/api/v1/user/me")
+      .then(({ data }) => { if (data?.user?.email) setUserEmail(data.user.email); })
+      .catch(() => {});
+  }, []);
+
+  // ─── Close profile menu on outside click ──────────────────────────
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  // ─── Sign out ─────────────────────────────────────────────────────
+  const handleSignOut = async () => {
+    await api.post("/api/v1/user/signout");
+    router.push("/signin");
+  };
+
   // ─── Fetch balance ─────────────────────────────────────────────────
   const fetchBalance = useCallback(async () => {
     try {
-      const res = await fetch("/api/v1/order/user/balance", { credentials: "include" });
-      if (res.status === 401) {
-        router.push("/signin");
-        return;
-      }
-      const data = await res.json();
+      const { data } = await api.get("/api/v1/order/user/balance");
       setBalance(data.balance?.balance || "0.00");
-    } catch {}
+    } catch (err: any) {
+      if (err.response?.status === 401) router.push("/signin");
+    }
   }, [router]);
 
   // ─── Fetch orders ──────────────────────────────────────────────────
   const fetchOrders = useCallback(async () => {
     try {
       const [openRes, closedRes] = await Promise.all([
-        fetch("/api/v1/order/user/orders?status=OPEN", { credentials: "include" }),
-        fetch("/api/v1/order/user/orders?status=CLOSED", { credentials: "include" }),
+        api.get("/api/v1/order/user/orders?status=OPEN"),
+        api.get("/api/v1/order/user/orders?status=CLOSED"),
       ]);
-      if (openRes.ok) {
-        const data = await openRes.json();
-        setOrders(data.orders || []);
-      }
-      if (closedRes.ok) {
-        const data = await closedRes.json();
-        setClosedOrders(data.orders || []);
-      }
+      setOrders(openRes.data.orders || []);
+      setClosedOrders(closedRes.data.orders || []);
     } catch {}
   }, []);
 
@@ -295,7 +343,7 @@ export default function TradePage() {
     const isBuy = orderTypeRef.current === "LONG";
     bidLineRef.current = series.createPriceLine({
       price: 0,
-      color: "#ef5350",
+      color: "#ff9800",
       lineWidth: 1,
       lineStyle: 2, // dashed
       axisLabelVisible: !isBuy,
@@ -304,7 +352,7 @@ export default function TradePage() {
     });
     askLineRef.current = series.createPriceLine({
       price: 0,
-      color: "#26a69a",
+      color: "#42a5f5",
       lineWidth: 1,
       lineStyle: 2, // dashed
       axisLabelVisible: isBuy,
@@ -313,9 +361,8 @@ export default function TradePage() {
     });
 
     // Fetch candle data
-    fetch(`/candles?asset=${selectedAsset}&duration=${selectedDuration}`)
-      .then((res) => res.json())
-      .then((data) => {
+    api.get(`/candles?asset=${selectedAsset}&duration=${selectedDuration}`)
+      .then(({ data }) => {
         if (data.candles && data.candles.length > 0) {
           const candles = data.candles as CandlestickData[];
           series.setData(candles);
@@ -356,24 +403,14 @@ export default function TradePage() {
       if (stopLoss) body.stopLoss = Number(stopLoss);
       if (takeProfit) body.takeProfit = Number(takeProfit);
 
-      const res = await fetch("/api/v1/order/open", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setOrderError(data.message || "Failed to open order");
-        return;
-      }
+      await api.post("/api/v1/order/open", body);
       setQty("");
       setStopLoss("");
       setTakeProfit("");
       fetchBalance();
       fetchOrders();
-    } catch {
-      setOrderError("Something went wrong");
+    } catch (err: any) {
+      setOrderError(err.response?.data?.message || "Something went wrong");
     } finally {
       setOrderLoading(false);
     }
@@ -382,12 +419,12 @@ export default function TradePage() {
   // ─── Close order ───────────────────────────────────────────────────
   async function handleCloseOrder(orderId: string) {
     try {
-      const res = await fetch(`/api/v1/order/close/${orderId}`, {
-        method: "POST",
-        credentials: "include",
-      });
-      if (res.ok) {
-        fetchBalance();
+      const { data } = await api.post(`/api/v1/order/close/${orderId}`);
+      fetchBalance();
+      if (data.order) {
+        setOrders((prev) => prev.filter((o) => o.orderId !== orderId));
+        setClosedOrders((prev) => [data.order, ...prev]);
+      } else {
         fetchOrders();
       }
     } catch {}
@@ -395,6 +432,20 @@ export default function TradePage() {
 
   // ─── Current price for selected asset ──────────────────────────────
   const currentPrice = prices[selectedAsset];
+
+  // ─── Compute real-time PnL for open orders using live prices ──────
+  const computePnL = (order: Order): number => {
+    const livePrice = prices[order.asset];
+    if (!livePrice) return 0;
+    const entry = fromInt(order.executionPriceInt);
+    const qty = fromInt(order.qtyInt);
+    const current = (livePrice.bidPrice + livePrice.askPrice) / 2;
+    if (order.orderType === "LONG") return (current - entry) * qty;
+    return (entry - current) * qty;
+  };
+
+  const totalPnL = orders.reduce((sum, o) => sum + computePnL(o), 0);
+  const equity = parseFloat(balance) + totalPnL;
 
   return (
     <div className="flex flex-col" style={{ height: "100vh", backgroundColor: "#131722", color: "#d1d4dc", fontFamily: "sans-serif" }}>
@@ -426,9 +477,98 @@ export default function TradePage() {
 
         <div className="flex-1" />
 
-        <span style={{ fontSize: "13px", color: "#8a8a9a" }}>
-          Balance: <span style={{ color: "#26a69a", fontWeight: 600 }}>${balance}</span>
+        <span style={{ fontSize: "13px", color: "#8a8a9a", display: "flex", gap: "16px" }}>
+          <span>Balance: <span style={{ color: "#d1d4dc", fontWeight: 600 }}>${balance}</span></span>
+          {orders.length > 0 && (
+            <>
+              <span>Equity: <span style={{ color: equity >= parseFloat(balance) ? "#26a69a" : "#ef5350", fontWeight: 600 }}>${equity.toFixed(2)}</span></span>
+              <span>P/L: <span style={{ color: totalPnL >= 0 ? "#26a69a" : "#ef5350", fontWeight: 600 }}>{totalPnL >= 0 ? "+" : ""}{totalPnL.toFixed(2)} USD</span></span>
+            </>
+          )}
         </span>
+
+        {/* Profile button */}
+        <div ref={profileMenuRef} style={{ position: "relative", marginLeft: "16px" }}>
+          <button
+            onClick={() => setShowProfileMenu((v) => !v)}
+            style={{
+              width: "32px",
+              height: "32px",
+              borderRadius: "50%",
+              backgroundColor: "#2a2a3e",
+              border: "none",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d1d4dc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+          </button>
+
+          {showProfileMenu && (
+            <div style={{
+              position: "absolute",
+              top: "40px",
+              right: 0,
+              backgroundColor: "#1e222d",
+              border: "1px solid #2a2a3e",
+              borderRadius: "8px",
+              padding: "8px 0",
+              minWidth: "220px",
+              zIndex: 100,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+            }}>
+              {/* User email */}
+              <div style={{ padding: "12px 16px", borderBottom: "1px solid #2a2a3e", display: "flex", alignItems: "center", gap: "10px" }}>
+                <div style={{
+                  width: "28px",
+                  height: "28px",
+                  borderRadius: "50%",
+                  backgroundColor: "#2a2a3e",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a8a9a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                </div>
+                <span style={{ fontSize: "13px", color: "#d1d4dc" }}>{userEmail || "—"}</span>
+              </div>
+
+              {/* Sign Out */}
+              <button
+                onClick={handleSignOut}
+                style={{
+                  width: "100%",
+                  padding: "10px 16px",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  fontSize: "13px",
+                  color: "#d1d4dc",
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "#2a2a3e"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "transparent"; }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a8a9a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                Sign Out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ─── Main Layout ───────────────────────────────── */}
@@ -528,7 +668,7 @@ export default function TradePage() {
         </div>
 
         {/* ─── Center: Chart + Positions ────────────────── */}
-        <div className="flex flex-col flex-1" style={{ overflow: "hidden" }}>
+        <div ref={centerColumnRef} className="flex flex-col flex-1" style={{ overflow: "hidden" }}>
 
           {/* Timeframe selector */}
           <div className="flex items-center" style={{ padding: "8px 16px", gap: "4px", borderBottom: "1px solid #2a2a3e" }}>
@@ -565,7 +705,28 @@ export default function TradePage() {
           <div ref={chartContainerRef} className="flex-1" style={{ minHeight: 0 }} />
 
           {/* Positions panel */}
-          <div style={{ height: "200px", borderTop: "1px solid #2a2a3e", overflowY: "auto" }}>
+          <div style={{ height: `${panelHeight}px`, minHeight: `${PANEL_MIN}px`, display: "flex", flexDirection: "column", position: "relative" }}>
+            {/* Vertical drag handle */}
+            <div
+              onMouseDown={() => {
+                isResizingPanelRef.current = true;
+                document.body.style.cursor = "row-resize";
+                document.body.style.userSelect = "none";
+              }}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                height: "5px",
+                cursor: "row-resize",
+                backgroundColor: "transparent",
+                zIndex: 10,
+                borderTop: "1px solid #2a2a3e",
+              }}
+              onMouseEnter={(e) => { (e.target as HTMLElement).style.backgroundColor = "#FFB800"; }}
+              onMouseLeave={(e) => { if (!isResizingPanelRef.current) (e.target as HTMLElement).style.backgroundColor = "transparent"; }}
+            />
             {/* Tabs */}
             <div className="flex" style={{ borderBottom: "1px solid #2a2a3e" }}>
               <button
@@ -575,9 +736,10 @@ export default function TradePage() {
                   fontSize: "12px",
                   fontWeight: 600,
                   color: positionTab === "open" ? "#d1d4dc" : "#8a8a9a",
-                  borderBottom: positionTab === "open" ? "2px solid #2962ff" : "2px solid transparent",
                   background: "none",
-                  border: "none",
+                  borderTop: "none",
+                  borderLeft: "none",
+                  borderRight: "none",
                   borderBottomStyle: "solid",
                   borderBottomWidth: "2px",
                   borderBottomColor: positionTab === "open" ? "#2962ff" : "transparent",
@@ -594,7 +756,9 @@ export default function TradePage() {
                   fontWeight: 600,
                   color: positionTab === "closed" ? "#d1d4dc" : "#8a8a9a",
                   background: "none",
-                  border: "none",
+                  borderTop: "none",
+                  borderLeft: "none",
+                  borderRight: "none",
                   borderBottomStyle: "solid",
                   borderBottomWidth: "2px",
                   borderBottomColor: positionTab === "closed" ? "#2962ff" : "transparent",
@@ -605,8 +769,21 @@ export default function TradePage() {
               </button>
             </div>
 
+            {/* Table header */}
+            <div style={{ display: "flex", padding: "8px 16px", fontSize: "10px", color: "#6a6a7a", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid #2a2a3e" }}>
+              <div style={{ flex: 1, minWidth: "70px" }}>Symbol</div>
+              <div style={{ flex: 0.7, minWidth: "55px" }}>Type</div>
+              <div style={{ flex: 1, minWidth: "80px", textAlign: "right" }}>Volume</div>
+              <div style={{ flex: 1.1, minWidth: "90px", textAlign: "right" }}>Open price</div>
+              <div style={{ flex: 1.1, minWidth: "90px", textAlign: "right" }}>{positionTab === "closed" ? "Close price" : "Current price"}</div>
+              <div style={{ flex: 1, minWidth: "80px", textAlign: "right" }}>S/L</div>
+              <div style={{ flex: 1, minWidth: "80px", textAlign: "right" }}>T/P</div>
+              <div style={{ flex: 1, minWidth: "80px", textAlign: "right" }}>P/L, USD</div>
+              <div style={{ width: "80px" }} />
+            </div>
+
             {/* Positions list */}
-            <div style={{ padding: "8px" }}>
+            <div style={{ overflowY: "auto", flex: 1 }}>
               {positionTab === "open" && orders.length === 0 && (
                 <div style={{ textAlign: "center", padding: "24px", color: "#8a8a9a", fontSize: "13px" }}>
                   No open positions
@@ -619,69 +796,106 @@ export default function TradePage() {
               )}
 
               {positionTab === "open" &&
-                orders.map((o) => (
-                  <div
-                    key={o.orderId}
-                    className="flex items-center"
-                    style={{ padding: "8px", fontSize: "12px", borderBottom: "1px solid #2a2a3e", gap: "16px" }}
-                  >
-                    <span style={{ fontWeight: 600, color: o.orderType === "LONG" ? "#26a69a" : "#ef5350" }}>
-                      {o.orderType}
-                    </span>
-                    <span>{o.asset}</span>
-                    <span style={{ color: "#8a8a9a" }}>{o.leverage}x</span>
-                    <span style={{ color: "#8a8a9a" }}>Qty: {o.qty}</span>
-                    <span style={{ color: "#8a8a9a" }}>Entry: ${o.executionPrice}</span>
-                    <span
-                      style={{
-                        color: parseFloat(o.currentPnL) >= 0 ? "#26a69a" : "#ef5350",
-                        fontWeight: 600,
-                      }}
+                orders.map((o) => {
+                  const pnl = computePnL(o);
+                  const livePrice = prices[o.asset];
+                  const currentMid = livePrice ? ((livePrice.bidPrice + livePrice.askPrice) / 2).toFixed(2) : "—";
+                  const assetLabel = o.asset.replace("USDT", "");
+                  const sl = o.stopLossInt && o.stopLossInt !== "0" ? fromInt(o.stopLossInt) : null;
+                  const tp = o.takeProfitInt && o.takeProfitInt !== "0" ? fromInt(o.takeProfitInt) : null;
+                  return (
+                    <div
+                      key={o.orderId}
+                      style={{ display: "flex", alignItems: "center", padding: "10px 16px", fontSize: "12px", borderBottom: "1px solid #1e222d" }}
                     >
-                      PnL: ${o.currentPnL}
-                    </span>
-                    <div className="flex-1" />
-                    <button
-                      onClick={() => handleCloseOrder(o.orderId)}
-                      style={{
-                        background: "#ef5350",
-                        color: "#fff",
-                        border: "none",
-                        padding: "4px 12px",
-                        borderRadius: "3px",
-                        fontSize: "11px",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                      }}
-                    >
-                      Close
-                    </button>
-                  </div>
-                ))}
+                      <div style={{ flex: 1, minWidth: "70px", display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ fontWeight: 600, color: "#d1d4dc" }}>{assetLabel}</span>
+                      </div>
+                      <div style={{ flex: 0.7, minWidth: "55px", display: "flex", alignItems: "center", gap: "4px" }}>
+                        <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: o.orderType === "LONG" ? "#26a69a" : "#ef5350" }} />
+                        <span style={{ color: "#d1d4dc" }}>{o.orderType === "LONG" ? "Buy" : "Sell"}</span>
+                      </div>
+                      <div style={{ flex: 1, minWidth: "80px", textAlign: "right", color: "#d1d4dc" }}>{fromInt(o.qtyInt).toFixed(8)}</div>
+                      <div style={{ flex: 1.1, minWidth: "90px", textAlign: "right", color: "#8a8a9a", fontFamily: "monospace" }}>{parseFloat(o.executionPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      <div style={{ flex: 1.1, minWidth: "90px", textAlign: "right", color: "#d1d4dc", fontFamily: "monospace" }}>{currentMid !== "—" ? parseFloat(currentMid).toLocaleString(undefined, { minimumFractionDigits: 2 }) : "—"}</div>
+                      <div style={{ flex: 1, minWidth: "80px", textAlign: "right", color: sl ? "#ef5350" : "#6a6a7a", fontFamily: "monospace" }}>{sl ? sl.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "—"}</div>
+                      <div style={{ flex: 1, minWidth: "80px", textAlign: "right", color: tp ? "#26a69a" : "#6a6a7a", fontFamily: "monospace" }}>{tp ? tp.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "—"}</div>
+                      <div style={{ flex: 1, minWidth: "80px", textAlign: "right", fontWeight: 600, fontFamily: "monospace", color: pnl >= 0 ? "#26a69a" : "#ef5350" }}>
+                        {pnl >= 0 ? "+" : ""}{pnl.toFixed(2)}
+                      </div>
+                      <div style={{ width: "80px", textAlign: "right" }}>
+                        <button
+                          onClick={() => handleCloseOrder(o.orderId)}
+                          style={{
+                            background: "none",
+                            color: "#8a8a9a",
+                            border: "1px solid #2a2a3e",
+                            padding: "4px 12px",
+                            borderRadius: "3px",
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#ef5350"; e.currentTarget.style.color = "#ef5350"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a2a3e"; e.currentTarget.style.color = "#8a8a9a"; }}
+                        >
+                          Close
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
 
               {positionTab === "closed" &&
-                closedOrders.map((o) => (
-                  <div
-                    key={o.orderId}
-                    className="flex items-center"
-                    style={{ padding: "8px", fontSize: "12px", borderBottom: "1px solid #2a2a3e", gap: "16px" }}
-                  >
-                    <span style={{ fontWeight: 600, color: o.orderType === "LONG" ? "#26a69a" : "#ef5350" }}>
-                      {o.orderType}
-                    </span>
-                    <span>{o.asset}</span>
-                    <span style={{ color: "#8a8a9a" }}>{o.leverage}x</span>
-                    <span style={{ color: "#8a8a9a" }}>Qty: {o.qty}</span>
-                    <span
-                      style={{
-                        color: parseFloat(o.currentPnL) >= 0 ? "#26a69a" : "#ef5350",
-                        fontWeight: 600,
-                      }}
+                closedOrders.map((o) => {
+                  const pnl = fromInt(o.finalPnLInt);
+                  const assetLabel = o.asset.replace("USDT", "");
+                  const sl = o.stopLossInt && o.stopLossInt !== "0" ? fromInt(o.stopLossInt) : null;
+                  const tp = o.takeProfitInt && o.takeProfitInt !== "0" ? fromInt(o.takeProfitInt) : null;
+                  // Compute close price: LONG: entry + PnL/qty, SHORT: entry - PnL/qty
+                  const entryPrice = fromInt(o.executionPriceInt);
+                  const qty = fromInt(o.qtyInt);
+                  const closePrice = qty > 0
+                    ? (o.orderType === "LONG" ? entryPrice + pnl / qty : entryPrice - pnl / qty)
+                    : entryPrice;
+                  return (
+                    <div
+                      key={o.orderId}
+                      style={{ display: "flex", alignItems: "center", padding: "10px 16px", fontSize: "12px", borderBottom: "1px solid #1e222d" }}
                     >
-                      PnL: ${o.currentPnL}
-                    </span>
-                  </div>
-                ))}
+                      <div style={{ flex: 1, minWidth: "70px", fontWeight: 600, color: "#d1d4dc" }}>{assetLabel}</div>
+                      <div style={{ flex: 0.7, minWidth: "55px", display: "flex", alignItems: "center", gap: "4px" }}>
+                        <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: o.orderType === "LONG" ? "#26a69a" : "#ef5350" }} />
+                        <span style={{ color: "#d1d4dc" }}>{o.orderType === "LONG" ? "Buy" : "Sell"}</span>
+                      </div>
+                      <div style={{ flex: 1, minWidth: "80px", textAlign: "right", color: "#d1d4dc" }}>{fromInt(o.qtyInt).toFixed(8)}</div>
+                      <div style={{ flex: 1.1, minWidth: "90px", textAlign: "right", color: "#8a8a9a", fontFamily: "monospace" }}>{parseFloat(o.executionPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      <div style={{ flex: 1.1, minWidth: "90px", textAlign: "right", color: "#d1d4dc", fontFamily: "monospace" }}>{closePrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      <div style={{ flex: 1, minWidth: "80px", textAlign: "right", color: sl ? "#ef5350" : "#6a6a7a", fontFamily: "monospace" }}>{sl ? sl.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "—"}</div>
+                      <div style={{ flex: 1, minWidth: "80px", textAlign: "right", color: tp ? "#26a69a" : "#6a6a7a", fontFamily: "monospace" }}>{tp ? tp.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "—"}</div>
+                      <div style={{ flex: 1, minWidth: "80px", textAlign: "right", fontWeight: 600, fontFamily: "monospace", color: pnl >= 0 ? "#26a69a" : "#ef5350" }}>
+                        {pnl >= 0 ? "+" : ""}{pnl.toFixed(2)}
+                      </div>
+                      <div style={{ width: "80px", textAlign: "center" }}>
+                        {(() => {
+                          const reason = o.closeReason;
+                          const cfg = reason === "MARGIN_CALL"
+                            ? { label: "Margin Call", bg: "rgba(239,83,80,0.15)", color: "#ef5350" }
+                            : reason === "STOP_LOSS"
+                            ? { label: "S/L", bg: "rgba(255,152,0,0.15)", color: "#ff9800" }
+                            : reason === "TAKE_PROFIT"
+                            ? { label: "T/P", bg: "rgba(38,166,154,0.15)", color: "#26a69a" }
+                            : { label: "Manual", bg: "rgba(138,138,154,0.15)", color: "#8a8a9a" };
+                          return (
+                            <span style={{ padding: "2px 8px", borderRadius: "4px", fontSize: "10px", fontWeight: 600, backgroundColor: cfg.bg, color: cfg.color }}>
+                              {cfg.label}
+                            </span>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           </div>
         </div>

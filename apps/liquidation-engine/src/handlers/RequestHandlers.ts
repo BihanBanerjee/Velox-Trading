@@ -303,7 +303,7 @@ export class RequestHandler {
         );
 
         // Update state: close order and return margin + P&L
-        this.state.closeOrder(orderId, PnLInt);
+        this.state.closeOrder(orderId, PnLInt, "MANUAL");
 
         const currentBalance = this.state.getBalance(userId);
         const newBalance = add(add(currentBalance, order.marginInt), PnLInt);

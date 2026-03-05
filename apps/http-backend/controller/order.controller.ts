@@ -7,7 +7,7 @@
 import type { Response } from "express"
 import type { authRequest } from "../middleware/auth";
 import { engineClient } from "../services/engineClient";
-import type { OrderType, Asset, OrderStatus } from "@exness/prisma-client";
+import { prisma, type OrderType, type Asset, type OrderStatus } from "@exness/prisma-client";
 import { formatPrice } from "@exness/price-utils";
 
 
@@ -265,11 +265,47 @@ export const getUserOrders = async (req: authRequest, res: Response) => {
 
         const { status } = req.query;
 
-        // Validation is handled by Zod middleware
-        // Send request to engine
+        // Closed/Liquidated orders: query PostgreSQL (persisted by db-worker)
+        // Open orders: query the engine (in-memory state)
+        if (status === "CLOSED" || status === "LIQUIDATED") {
+            const closedOrders = await prisma.closedOrder.findMany({
+                where: { userId: user.id },
+                orderBy: { closedAt: "desc" },
+            });
+
+            const orders = closedOrders.map(order => ({
+                orderId: order.orderId,
+                userId: order.userId,
+                asset: order.asset,
+                orderType: order.orderType,
+                leverage: order.leverage,
+                status: "CLOSED",
+                marginInt: order.marginInt.toString(),
+                executionPriceInt: order.executionPriceInt.toString(),
+                qtyInt: order.qtyInt.toString(),
+                stopLossInt: order.stopLossInt.toString(),
+                takeProfitInt: order.takeProfitInt.toString(),
+                liquidationPriceInt: "0",
+                finalPnLInt: order.finalPnLInt.toString(),
+                closeReason: order.closeReason || null,
+                margin: formatPrice(order.marginInt, 2),
+                executionPrice: formatPrice(order.executionPriceInt, 2),
+                liquidationPrice: "0.00",
+                createdAt: order.createdAt,
+                closedAt: order.closedAt,
+            }));
+
+            return res.json({
+                success: true,
+                orders,
+                count: orders.length,
+            });
+        }
+
+        // Open orders: query the engine
         const response = await engineClient.getUserOrders(
             user.id,
-            status as "OPEN" | "CLOSED" | undefined
+            status as "OPEN" | undefined
         );
 
         if(response.success) {

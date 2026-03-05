@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import api from "@/lib/axios";
 
 export default function SignIn() {
   const router = useRouter();
@@ -18,23 +19,10 @@ export default function SignIn() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/v1/user/signin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.message || "Invalid credentials");
-        return;
-      }
-
+      await api.post("/api/v1/user/signin", { email, password });
       router.push("/trade");
-    } catch {
-      setError("Something went wrong. Please try again.");
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }

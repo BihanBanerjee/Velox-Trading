@@ -137,6 +137,7 @@ export interface OrderData {
     createdAt: Date;
     finalPnLInt: bigint;
     userId: string;
+    closeReason?: "MANUAL" | "MARGIN_CALL" | "STOP_LOSS" | "TAKE_PROFIT";
 }
 
 export interface BalanceData {

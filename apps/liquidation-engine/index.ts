@@ -14,13 +14,14 @@ import { StateManager } from "./src/state/StateManager";
 import { RequestHandler } from "./src/handlers/RequestHandlers";
 import { SnapshotManager } from "./src/persistence/SnapshotManager";
 import { PriceMonitor } from "./src/monitoring/PriceMonitor";
-import { STREAMS, ENGINE_STATUS_KEY, EngineStatus, deserializeFromStream } from "@exness/redis-stream-types";
-import type { StreamRequest, EngineStatusData } from "@exness/redis-stream-types";
+import { STREAMS, ENGINE_STATUS_KEY, EngineStatus, deserializeFromStream, createSuccessResponse } from "@exness/redis-stream-types";
+import type { StreamRequest, EngineStatusData, CloseOrderResponseData } from "@exness/redis-stream-types";
 import {
     getLatestStreamId,
     publishResponse,
     publishResponseToQueue
 } from "@exness/redis-client/stream";
+import { formatPrice } from "@exness/price-utils";
 import { RESPONSE_QUEUE } from "@exness/redis-client/subscriber";
 import { prisma } from "@exness/prisma-client";
 
@@ -81,6 +82,25 @@ async function initialize (): Promise<void> {
     // Set up price monitor liquidation callback
     priceMonitor.setLiquidationCallback(async (orderId, reason, pnl) => {
         await priceMonitor.liquidateOrder(orderId, reason, pnl);
+
+        // Publish to response stream so db-worker can persist auto-liquidated orders
+        const updatedOrder = state.getOrder(orderId);
+        if (updatedOrder) {
+            const balance = state.getBalance(updatedOrder.userId);
+            const response = createSuccessResponse<CloseOrderResponseData>(
+                `liquidation_${orderId}`,
+                {
+                    order: updatedOrder,
+                    balance: {
+                        balanceInt: balance,
+                        userId: updatedOrder.userId,
+                    },
+                    PnL: formatPrice(pnl),
+                }
+            );
+            await publishResponse(redisClient, STREAMS.RESPONSE, response);
+            console.log(`[Liquidation] Published ${reason} response for order ${orderId} to response stream`);
+        }
     });
 
     // Load latest snapshot
