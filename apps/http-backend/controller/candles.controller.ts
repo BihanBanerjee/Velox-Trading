@@ -18,10 +18,12 @@ export const getCandles = async (req: Request, res: Response) => {
 
     // Map duration to TimescaleDB materialized view
     const viewMap: Record<string, string> = {
+      '30s': 'trades_30s',
       '1m': 'trades_1m',
-      '2m': 'trades_2m',
       '5m': 'trades_5m',
-      '10m': 'trades_10m',
+      '15m': 'trades_15m',
+      '1h': 'trades_1h',
+      '4h': 'trades_4h',
       '1d': 'trades_1d'
     };
 
