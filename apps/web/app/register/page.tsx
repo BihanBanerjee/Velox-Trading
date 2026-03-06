@@ -33,52 +33,30 @@ export default function Register() {
     <div className="min-h-screen bg-white flex flex-col">
 
       {/* Navbar */}
-      <header style={{ borderBottom: "1px solid #e5e7eb", padding: "20px 32px" }}>
-        <Link
-          href="/"
-          style={{ fontSize: "24px", fontWeight: 600, color: "#141d22", letterSpacing: "-0.03em" }}
-        >
+      <header className="border-b border-gray-200 py-5 px-8">
+        <Link href="/" className="text-2xl font-semibold text-dark tracking-tight">
           velox
         </Link>
       </header>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col items-center" style={{ paddingTop: "64px" }}>
-        <div className="w-full" style={{ maxWidth: "480px", padding: "0 16px" }}>
+      <div className="flex-1 flex flex-col items-center pt-16">
+        <div className="w-full max-w-[480px] px-4">
 
           {/* Heading */}
-          <h1 style={{ fontSize: "28px", fontWeight: 700, color: "#141d22", marginBottom: "32px" }}>
+          <h1 className="text-[28px] font-bold text-dark mb-8">
             Welcome to Velox
           </h1>
 
           {/* Tabs */}
-          <div className="flex" style={{ borderBottom: "1px solid #e5e7eb", marginBottom: "32px" }}>
+          <div className="flex border-b border-gray-200 mb-8">
             <Link
               href="/signin"
-              style={{
-                flex: 1,
-                paddingBottom: "12px",
-                fontSize: "14px",
-                fontWeight: 500,
-                color: "#9ca3af",
-                textAlign: "center",
-              }}
+              className="flex-1 pb-3 text-sm font-medium text-gray-400 text-center"
             >
               Sign in
             </Link>
-            <div
-              style={{
-                flex: 1,
-                paddingBottom: "12px",
-                fontSize: "14px",
-                fontWeight: 600,
-                color: "#141d22",
-                borderBottom: "3px solid #141d22",
-                marginBottom: "-1px",
-                cursor: "pointer",
-                textAlign: "center",
-              }}
-            >
+            <div className="flex-1 pb-3 text-sm font-semibold text-dark text-center border-b-3 border-dark -mb-px cursor-pointer">
               Create an account
             </div>
           </div>
@@ -87,63 +65,44 @@ export default function Register() {
           <form onSubmit={handleSubmit} className="flex flex-col">
 
             {/* Email */}
-            <div className="flex flex-col" style={{ gap: "8px", marginBottom: "24px" }}>
-              <label style={{ fontSize: "14px", color: "#374151" }}>Your email address</label>
+            <div className="flex flex-col gap-2 mb-6">
+              <label className="text-sm text-gray-700">Your email address</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full focus:outline-none"
-                style={{
-                  border: "1px solid #d1d5db",
-                  borderRadius: "6px",
-                  padding: "14px 12px",
-                  fontSize: "14px",
-                }}
+                className="w-full border border-gray-300 rounded-md py-3.5 px-3 text-sm focus:outline-none"
               />
             </div>
 
             {/* Phone */}
-            <div className="flex flex-col" style={{ gap: "8px", marginBottom: "24px" }}>
-              <label style={{ fontSize: "14px", color: "#374151" }}>Phone number</label>
+            <div className="flex flex-col gap-2 mb-6">
+              <label className="text-sm text-gray-700">Phone number</label>
               <input
                 type="tel"
                 required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full focus:outline-none"
-                style={{
-                  border: "1px solid #d1d5db",
-                  borderRadius: "6px",
-                  padding: "14px 12px",
-                  fontSize: "14px",
-                }}
+                className="w-full border border-gray-300 rounded-md py-3.5 px-3 text-sm focus:outline-none"
               />
             </div>
 
             {/* Password */}
-            <div className="flex flex-col" style={{ gap: "8px", marginBottom: "40px" }}>
-              <label style={{ fontSize: "14px", color: "#374151" }}>Password</label>
+            <div className="flex flex-col gap-2 mb-10">
+              <label className="text-sm text-gray-700">Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full focus:outline-none"
-                  style={{
-                    border: "1px solid #d1d5db",
-                    borderRadius: "6px",
-                    padding: "14px 40px 14px 12px",
-                    fontSize: "14px",
-                  }}
+                  className="w-full border border-gray-300 rounded-md py-3.5 pr-10 pl-3 text-sm focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
-                  style={{ color: "#9ca3af" }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
                 >
                   {showPassword ? (
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -159,21 +118,13 @@ export default function Register() {
               </div>
             </div>
 
-            {error && <p style={{ color: "#ef4444", fontSize: "14px", marginBottom: "16px" }}>{error}</p>}
+            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
             {/* Register button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full disabled:opacity-60 transition-colors"
-              style={{
-                backgroundColor: "#FFB800",
-                padding: "16px",
-                borderRadius: "6px",
-                fontSize: "14px",
-                fontWeight: 600,
-                color: "#141d22",
-              }}
+              className="w-full bg-brand text-dark font-semibold text-sm py-4 rounded-md disabled:opacity-60 transition-colors"
             >
               {loading ? "Registering..." : "Register"}
             </button>

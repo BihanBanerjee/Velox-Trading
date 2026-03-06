@@ -48,85 +48,57 @@ export default function SignIn() {
     }
   }
 
-  const tabStyle = (isActive: boolean) => ({
-    flex: 1,
-    paddingBottom: "12px",
-    fontSize: "14px",
-    fontWeight: isActive ? 600 : 500,
-    color: isActive ? "#141d22" : "#9ca3af",
-    borderBottom: isActive ? "3px solid #141d22" : "none",
-    marginBottom: "-1px",
-    cursor: "pointer" as const,
-    textAlign: "center" as const,
-    background: "none",
-    border: "none",
-  });
-
   return (
     <div className="min-h-screen bg-white flex flex-col">
 
       {/* Navbar */}
-      <header style={{ borderBottom: "1px solid #e5e7eb", padding: "20px 32px" }}>
-        <Link
-          href="/"
-          style={{ fontSize: "24px", fontWeight: 600, color: "#141d22", letterSpacing: "-0.03em" }}
-        >
+      <header className="border-b border-gray-200 py-5 px-8">
+        <Link href="/" className="text-2xl font-semibold text-dark tracking-tight">
           velox
         </Link>
       </header>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col items-center" style={{ paddingTop: "64px" }}>
-        <div className="w-full" style={{ maxWidth: "480px", padding: "0 16px" }}>
+      <div className="flex-1 flex flex-col items-center pt-16">
+        <div className="w-full max-w-[480px] px-4">
 
           {/* Heading */}
-          <h1 style={{ fontSize: "28px", fontWeight: 700, color: "#141d22", marginBottom: "32px" }}>
+          <h1 className="text-[28px] font-bold text-dark mb-8">
             Welcome to Velox
           </h1>
 
           {/* Sign in / Register tabs */}
-          <div className="flex" style={{ borderBottom: "1px solid #e5e7eb", marginBottom: "32px" }}>
-            <div
-              style={{
-                flex: 1,
-                paddingBottom: "12px",
-                fontSize: "14px",
-                fontWeight: 600,
-                color: "#141d22",
-                borderBottom: "3px solid #141d22",
-                marginBottom: "-1px",
-                cursor: "pointer",
-                textAlign: "center",
-              }}
-            >
+          <div className="flex border-b border-gray-200 mb-8">
+            <div className="flex-1 pb-3 text-sm font-semibold text-dark text-center border-b-3 border-dark -mb-px cursor-pointer">
               Sign in
             </div>
             <Link
               href="/register"
-              style={{
-                flex: 1,
-                paddingBottom: "12px",
-                fontSize: "14px",
-                fontWeight: 500,
-                color: "#9ca3af",
-                textAlign: "center",
-              }}
+              className="flex-1 pb-3 text-sm font-medium text-gray-400 text-center"
             >
               Create an account
             </Link>
           </div>
 
           {/* Auth method tabs */}
-          <div className="flex" style={{ marginBottom: "24px", gap: "4px" }}>
+          <div className="flex mb-6 gap-1">
             <button
               onClick={() => { setActiveTab("password"); setError(""); setMagicLinkSent(false); }}
-              style={tabStyle(activeTab === "password")}
+              className={`flex-1 pb-3 text-sm text-center bg-transparent border-none -mb-px cursor-pointer ${
+                activeTab === "password"
+                  ? "font-semibold text-dark border-b-3 border-dark"
+                  : "font-medium text-gray-400"
+              }`}
             >
               Password
             </button>
             <button
               onClick={() => { setActiveTab("magic-link"); setError(""); setMagicLinkSent(false); }}
-              style={tabStyle(activeTab === "magic-link")}
+              className={`flex-1 pb-3 text-sm text-center bg-transparent border-none -mb-px cursor-pointer ${
+                activeTab === "magic-link"
+                  ? "font-semibold text-dark border-b-3 border-dark"
+                  : "font-medium text-gray-400"
+              }`}
             >
               Email Link
             </button>
@@ -135,44 +107,31 @@ export default function SignIn() {
           {/* Password form */}
           {activeTab === "password" && (
             <form onSubmit={handlePasswordSubmit} className="flex flex-col">
-              <div className="flex flex-col" style={{ gap: "8px", marginBottom: "24px" }}>
-                <label style={{ fontSize: "14px", color: "#374151" }}>Your email address</label>
+              <div className="flex flex-col gap-2 mb-6">
+                <label className="text-sm text-gray-700">Your email address</label>
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full focus:outline-none"
-                  style={{
-                    border: "1px solid #d1d5db",
-                    borderRadius: "6px",
-                    padding: "14px 12px",
-                    fontSize: "14px",
-                  }}
+                  className="w-full border border-gray-300 rounded-md py-3.5 px-3 text-sm focus:outline-none"
                 />
               </div>
 
-              <div className="flex flex-col" style={{ gap: "8px", marginBottom: "40px" }}>
-                <label style={{ fontSize: "14px", color: "#374151" }}>Password</label>
+              <div className="flex flex-col gap-2 mb-10">
+                <label className="text-sm text-gray-700">Password</label>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full focus:outline-none"
-                    style={{
-                      border: "1px solid #d1d5db",
-                      borderRadius: "6px",
-                      padding: "14px 40px 14px 12px",
-                      fontSize: "14px",
-                    }}
+                    className="w-full border border-gray-300 rounded-md py-3.5 pr-10 pl-3 text-sm focus:outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2"
-                    style={{ color: "#9ca3af" }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
                   >
                     {showPassword ? (
                       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -188,20 +147,12 @@ export default function SignIn() {
                 </div>
               </div>
 
-              {error && <p style={{ color: "#ef4444", fontSize: "14px", marginBottom: "16px" }}>{error}</p>}
+              {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full disabled:opacity-60 transition-colors"
-                style={{
-                  backgroundColor: "#FFB800",
-                  padding: "16px",
-                  borderRadius: "6px",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  color: "#141d22",
-                }}
+                className="w-full bg-brand text-dark font-semibold text-sm py-4 rounded-md disabled:opacity-60 transition-colors"
               >
                 {loading ? "Signing in..." : "Sign in"}
               </button>
@@ -212,67 +163,43 @@ export default function SignIn() {
           {activeTab === "magic-link" && (
             <>
               {magicLinkSent ? (
-                <div className="flex flex-col items-center" style={{ padding: "32px 0", textAlign: "center" }}>
-                  <div style={{
-                    width: "48px",
-                    height: "48px",
-                    borderRadius: "50%",
-                    backgroundColor: "#FFF8E1",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginBottom: "16px",
-                    fontSize: "24px",
-                  }}>
+                <div className="flex flex-col items-center py-8 text-center">
+                  <div className="w-12 h-12 rounded-full bg-brand-light flex items-center justify-center mb-4 text-2xl">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#FFB800" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <h2 style={{ fontSize: "18px", fontWeight: 600, color: "#141d22", marginBottom: "8px" }}>
+                  <h2 className="text-lg font-semibold text-dark mb-2">
                     Check your inbox
                   </h2>
-                  <p style={{ fontSize: "14px", color: "#6b7280", lineHeight: 1.5 }}>
+                  <p className="text-sm text-gray-500 leading-relaxed">
                     We sent a sign-in link to <strong>{email}</strong>. Click the link in the email to sign in.
                   </p>
                   <button
                     onClick={() => { setMagicLinkSent(false); setEmail(""); }}
-                    style={{
-                      marginTop: "24px",
-                      fontSize: "14px",
-                      color: "#FFB800",
-                      fontWeight: 600,
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                    }}
+                    className="mt-6 text-sm text-brand font-semibold bg-transparent border-none cursor-pointer"
                   >
                     Use a different email
                   </button>
                 </div>
               ) : (
                 <form onSubmit={handleMagicLinkSubmit} className="flex flex-col">
-                  <div className="flex flex-col" style={{ gap: "8px", marginBottom: "40px" }}>
-                    <label style={{ fontSize: "14px", color: "#374151" }}>Your email address</label>
+                  <div className="flex flex-col gap-2 mb-10">
+                    <label className="text-sm text-gray-700">Your email address</label>
                     <input
                       type="email"
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full focus:outline-none"
-                      style={{
-                        border: "1px solid #d1d5db",
-                        borderRadius: "6px",
-                        padding: "14px 12px",
-                        fontSize: "14px",
-                      }}
+                      className="w-full border border-gray-300 rounded-md py-3.5 px-3 text-sm focus:outline-none"
                     />
                   </div>
 
                   {error && (
-                    <div style={{ marginBottom: "16px" }}>
-                      <p style={{ color: "#ef4444", fontSize: "14px" }}>{error}</p>
+                    <div className="mb-4">
+                      <p className="text-red-500 text-sm">{error}</p>
                       {error.includes("register") && (
-                        <Link href="/register" style={{ color: "#FFB800", fontSize: "14px", fontWeight: 600 }}>
+                        <Link href="/register" className="text-brand text-sm font-semibold">
                           Create an account
                         </Link>
                       )}
@@ -282,15 +209,7 @@ export default function SignIn() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full disabled:opacity-60 transition-colors"
-                    style={{
-                      backgroundColor: "#FFB800",
-                      padding: "16px",
-                      borderRadius: "6px",
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      color: "#141d22",
-                    }}
+                    className="w-full bg-brand text-dark font-semibold text-sm py-4 rounded-md disabled:opacity-60 transition-colors"
                   >
                     {loading ? "Sending..." : "Send Magic Link"}
                   </button>

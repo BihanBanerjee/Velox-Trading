@@ -366,7 +366,7 @@ export default function TradePage() {
         if (data.candles && data.candles.length > 0) {
           const candles = data.candles as CandlestickData[];
           series.setData(candles);
-          lastCandleRef.current = candles[candles.length - 1];
+          lastCandleRef.current = candles[candles.length - 1] ?? null;
           chart.timeScale().fitContent();
         }
       })
@@ -448,27 +448,19 @@ export default function TradePage() {
   const equity = parseFloat(balance) + totalPnL;
 
   return (
-    <div className="flex flex-col" style={{ height: "100vh", backgroundColor: "#131722", color: "#d1d4dc", fontFamily: "sans-serif" }}>
+    <div className="flex flex-col h-screen bg-trade-bg text-trade-text font-sans">
 
       {/* ─── Top Bar ───────────────────────────────────── */}
-      <div className="flex items-center" style={{ height: "48px", borderBottom: "1px solid #2a2a3e", padding: "0 16px", gap: "24px" }}>
+      <div className="flex items-center h-12 border-b border-trade-border px-4 gap-6">
         {ASSETS.map((a) => (
           <button
             key={a.symbol}
             onClick={() => setSelectedAsset(a.symbol)}
-            style={{
-              background: selectedAsset === a.symbol ? "#1e222d" : "transparent",
-              color: selectedAsset === a.symbol ? "#FFB800" : "#8a8a9a",
-              border: "none",
-              padding: "8px 16px",
-              fontSize: "13px",
-              fontWeight: 600,
-              borderRadius: "4px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
+            className={`flex items-center gap-1.5 border-none px-4 py-2 text-[13px] font-semibold rounded cursor-pointer ${
+              selectedAsset === a.symbol
+                ? "bg-trade-secondary text-brand"
+                : "bg-transparent text-trade-muted"
+            }`}
           >
             <span>{a.icon}</span>
             <span>{a.label}/USD</span>
@@ -477,31 +469,21 @@ export default function TradePage() {
 
         <div className="flex-1" />
 
-        <span style={{ fontSize: "13px", color: "#8a8a9a", display: "flex", gap: "16px" }}>
-          <span>Balance: <span style={{ color: "#d1d4dc", fontWeight: 600 }}>${balance}</span></span>
+        <span className="text-[13px] text-trade-muted flex gap-4">
+          <span>Balance: <span className="text-trade-text font-semibold">${balance}</span></span>
           {orders.length > 0 && (
             <>
-              <span>Equity: <span style={{ color: equity >= parseFloat(balance) ? "#26a69a" : "#ef5350", fontWeight: 600 }}>${equity.toFixed(2)}</span></span>
-              <span>P/L: <span style={{ color: totalPnL >= 0 ? "#26a69a" : "#ef5350", fontWeight: 600 }}>{totalPnL >= 0 ? "+" : ""}{totalPnL.toFixed(2)} USD</span></span>
+              <span>Equity: <span className={`font-semibold ${equity >= parseFloat(balance) ? "text-bull" : "text-bear"}`}>${equity.toFixed(2)}</span></span>
+              <span>P/L: <span className={`font-semibold ${totalPnL >= 0 ? "text-bull" : "text-bear"}`}>{totalPnL >= 0 ? "+" : ""}{totalPnL.toFixed(2)} USD</span></span>
             </>
           )}
         </span>
 
         {/* Profile button */}
-        <div ref={profileMenuRef} style={{ position: "relative", marginLeft: "16px" }}>
+        <div ref={profileMenuRef} className="relative ml-4">
           <button
             onClick={() => setShowProfileMenu((v) => !v)}
-            style={{
-              width: "32px",
-              height: "32px",
-              borderRadius: "50%",
-              backgroundColor: "#2a2a3e",
-              border: "none",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+            className="w-8 h-8 rounded-full bg-trade-border border-none cursor-pointer flex items-center justify-center"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d1d4dc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -510,54 +492,22 @@ export default function TradePage() {
           </button>
 
           {showProfileMenu && (
-            <div style={{
-              position: "absolute",
-              top: "40px",
-              right: 0,
-              backgroundColor: "#1e222d",
-              border: "1px solid #2a2a3e",
-              borderRadius: "8px",
-              padding: "8px 0",
-              minWidth: "220px",
-              zIndex: 100,
-              boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-            }}>
+            <div className="absolute top-10 right-0 bg-trade-secondary border border-trade-border rounded-lg py-2 min-w-[220px] z-[100] shadow-[0_8px_24px_rgba(0,0,0,0.4)]">
               {/* User email */}
-              <div style={{ padding: "12px 16px", borderBottom: "1px solid #2a2a3e", display: "flex", alignItems: "center", gap: "10px" }}>
-                <div style={{
-                  width: "28px",
-                  height: "28px",
-                  borderRadius: "50%",
-                  backgroundColor: "#2a2a3e",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}>
+              <div className="flex items-center gap-2.5 px-4 py-3 border-b border-trade-border">
+                <div className="w-7 h-7 rounded-full bg-trade-border flex items-center justify-center">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a8a9a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                     <circle cx="12" cy="7" r="4" />
                   </svg>
                 </div>
-                <span style={{ fontSize: "13px", color: "#d1d4dc" }}>{userEmail || "—"}</span>
+                <span className="text-[13px] text-trade-text">{userEmail || "—"}</span>
               </div>
 
               {/* Sign Out */}
               <button
                 onClick={handleSignOut}
-                style={{
-                  width: "100%",
-                  padding: "10px 16px",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  fontSize: "13px",
-                  color: "#d1d4dc",
-                }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "#2a2a3e"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "transparent"; }}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 bg-transparent border-none cursor-pointer text-[13px] text-trade-text hover:bg-trade-border"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a8a9a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -572,21 +522,21 @@ export default function TradePage() {
       </div>
 
       {/* ─── Main Layout ───────────────────────────────── */}
-      <div className="flex flex-1" style={{ overflow: "hidden" }}>
+      <div className="flex flex-1 overflow-hidden">
 
         {/* ─── Left Sidebar: Instruments ─────────────────── */}
-        <div style={{ width: `${sidebarWidth}px`, minWidth: `${SIDEBAR_MIN}px`, maxWidth: `${SIDEBAR_MAX}px`, display: "flex", flexDirection: "column", position: "relative" }}>
-          <div style={{ padding: "12px 12px 8px", fontSize: "12px", fontWeight: 700, color: "#d1d4dc", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+        <div className="flex flex-col relative" style={{ width: `${sidebarWidth}px`, minWidth: `${SIDEBAR_MIN}px`, maxWidth: `${SIDEBAR_MAX}px` }}>
+          <div className="px-3 pt-3 pb-2 text-xs font-bold text-trade-text uppercase tracking-wide">
             Instruments
           </div>
           {/* Column headers */}
-          <div style={{ display: "flex", padding: "4px 12px 8px", fontSize: "10px", color: "#6a6a7a", fontWeight: 600, borderBottom: "1px solid #2a2a3e" }}>
-            <div style={{ flex: 1 }}>Symbol</div>
-            <div style={{ width: "80px", textAlign: "right" }}>Bid</div>
-            <div style={{ width: "80px", textAlign: "right" }}>Ask</div>
+          <div className="flex px-3 py-1 pb-2 text-[10px] text-trade-dim font-semibold border-b border-trade-border">
+            <div className="flex-1">Symbol</div>
+            <div className="w-20 text-right">Bid</div>
+            <div className="w-20 text-right">Ask</div>
           </div>
           {/* Scrollable asset list */}
-          <div style={{ flex: 1, overflowY: "auto", overflowX: "auto" }}>
+          <div className="flex-1 overflow-y-auto overflow-x-auto">
             {ASSETS.map((a) => {
               const p = prices[a.symbol];
               const prev = prevPricesRef.current[a.symbol];
@@ -596,48 +546,32 @@ export default function TradePage() {
                 <div
                   key={a.symbol}
                   onClick={() => setSelectedAsset(a.symbol)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    padding: "10px 12px",
-                    cursor: "pointer",
-                    backgroundColor: selectedAsset === a.symbol ? "#1e222d" : "transparent",
-                    borderLeft: selectedAsset === a.symbol ? "3px solid #FFB800" : "3px solid transparent",
-                    borderBottom: "1px solid #1e222d",
-                    minWidth: "fit-content",
-                  }}
+                  className={`flex items-center px-3 py-2.5 cursor-pointer border-b border-trade-secondary min-w-fit ${
+                    selectedAsset === a.symbol
+                      ? "bg-trade-secondary border-l-3 border-l-brand"
+                      : "bg-transparent border-l-3 border-l-transparent"
+                  }`}
                 >
-                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span style={{ fontSize: "14px" }}>{a.icon}</span>
-                    <span style={{ fontSize: "13px", fontWeight: 600, color: "#d1d4dc", whiteSpace: "nowrap" }}>{a.label}</span>
+                  <div className="flex-1 flex items-center gap-2">
+                    <span className="text-sm">{a.icon}</span>
+                    <span className="text-[13px] font-semibold text-trade-text whitespace-nowrap">{a.label}</span>
                   </div>
-                  <div style={{
-                    width: "80px",
-                    textAlign: "right",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    fontFamily: "monospace",
-                    color: p ? (bidUp ? "#26a69a" : "#ef5350") : "#6a6a7a",
-                    backgroundColor: p ? (bidUp ? "rgba(38,166,154,0.12)" : "rgba(239,83,80,0.12)") : "transparent",
-                    padding: "3px 6px",
-                    borderRadius: "3px",
-                    marginRight: "8px",
-                    transition: "color 0.15s",
-                  }}>
+                  <div
+                    className={`w-20 text-right text-xs font-semibold font-mono px-1.5 py-0.5 rounded-sm mr-2 transition-colors duration-150 ${
+                      p
+                        ? bidUp ? "text-bull bg-bull/12" : "text-bear bg-bear/12"
+                        : "text-trade-dim bg-transparent"
+                    }`}
+                  >
                     {p ? p.bidPrice.toFixed(2) : "—"}
                   </div>
-                  <div style={{
-                    width: "80px",
-                    textAlign: "right",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    fontFamily: "monospace",
-                    color: p ? (askUp ? "#26a69a" : "#ef5350") : "#6a6a7a",
-                    backgroundColor: p ? (askUp ? "rgba(38,166,154,0.12)" : "rgba(239,83,80,0.12)") : "transparent",
-                    padding: "3px 6px",
-                    borderRadius: "3px",
-                    transition: "color 0.15s",
-                  }}>
+                  <div
+                    className={`w-20 text-right text-xs font-semibold font-mono px-1.5 py-0.5 rounded-sm transition-colors duration-150 ${
+                      p
+                        ? askUp ? "text-bull bg-bull/12" : "text-bear bg-bear/12"
+                        : "text-trade-dim bg-transparent"
+                    }`}
+                  >
                     {p ? p.askPrice.toFixed(2) : "—"}
                   </div>
                 </div>
@@ -651,61 +585,44 @@ export default function TradePage() {
               document.body.style.cursor = "col-resize";
               document.body.style.userSelect = "none";
             }}
-            style={{
-              position: "absolute",
-              top: 0,
-              right: 0,
-              width: "5px",
-              height: "100%",
-              cursor: "col-resize",
-              backgroundColor: "transparent",
-              zIndex: 10,
-              borderRight: "1px solid #2a2a3e",
-            }}
-            onMouseEnter={(e) => { (e.target as HTMLElement).style.backgroundColor = "#FFB800"; }}
-            onMouseLeave={(e) => { if (!isResizingRef.current) (e.target as HTMLElement).style.backgroundColor = "transparent"; }}
+            className="absolute top-0 right-0 w-[5px] h-full cursor-col-resize bg-transparent z-10 border-r border-trade-border hover:bg-brand"
           />
         </div>
 
         {/* ─── Center: Chart + Positions ────────────────── */}
-        <div ref={centerColumnRef} className="flex flex-col flex-1" style={{ overflow: "hidden" }}>
+        <div ref={centerColumnRef} className="flex flex-col flex-1 overflow-hidden">
 
           {/* Timeframe selector */}
-          <div className="flex items-center" style={{ padding: "8px 16px", gap: "4px", borderBottom: "1px solid #2a2a3e" }}>
+          <div className="flex items-center px-4 py-2 gap-1 border-b border-trade-border">
             {DURATIONS.map((d) => (
               <button
                 key={d}
                 onClick={() => setSelectedDuration(d)}
-                style={{
-                  background: selectedDuration === d ? "#2962ff" : "transparent",
-                  color: selectedDuration === d ? "#fff" : "#8a8a9a",
-                  border: "none",
-                  padding: "4px 10px",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  borderRadius: "3px",
-                  cursor: "pointer",
-                }}
+                className={`border-none px-2.5 py-1 text-xs font-semibold rounded-sm cursor-pointer ${
+                  selectedDuration === d
+                    ? "bg-active text-white"
+                    : "bg-transparent text-trade-muted"
+                }`}
               >
                 {d}
               </button>
             ))}
 
             {currentPrice && (
-              <div className="flex-1 text-right" style={{ fontSize: "12px" }}>
-                <span style={{ color: "#8a8a9a" }}>Bid </span>
-                <span style={{ color: "#ef5350", fontWeight: 600 }}>{currentPrice.bidPrice.toFixed(2)}</span>
-                <span style={{ color: "#8a8a9a", marginLeft: "12px" }}>Ask </span>
-                <span style={{ color: "#26a69a", fontWeight: 600 }}>{currentPrice.askPrice.toFixed(2)}</span>
+              <div className="flex-1 text-right text-xs">
+                <span className="text-trade-muted">Bid </span>
+                <span className="text-bear font-semibold">{currentPrice.bidPrice.toFixed(2)}</span>
+                <span className="text-trade-muted ml-3">Ask </span>
+                <span className="text-bull font-semibold">{currentPrice.askPrice.toFixed(2)}</span>
               </div>
             )}
           </div>
 
           {/* Chart */}
-          <div ref={chartContainerRef} className="flex-1" style={{ minHeight: 0 }} />
+          <div ref={chartContainerRef} className="flex-1 min-h-0" />
 
           {/* Positions panel */}
-          <div style={{ height: `${panelHeight}px`, minHeight: `${PANEL_MIN}px`, display: "flex", flexDirection: "column", position: "relative" }}>
+          <div className="flex flex-col relative" style={{ height: `${panelHeight}px`, minHeight: `${PANEL_MIN}px` }}>
             {/* Vertical drag handle */}
             <div
               onMouseDown={() => {
@@ -713,84 +630,54 @@ export default function TradePage() {
                 document.body.style.cursor = "row-resize";
                 document.body.style.userSelect = "none";
               }}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                height: "5px",
-                cursor: "row-resize",
-                backgroundColor: "transparent",
-                zIndex: 10,
-                borderTop: "1px solid #2a2a3e",
-              }}
-              onMouseEnter={(e) => { (e.target as HTMLElement).style.backgroundColor = "#FFB800"; }}
-              onMouseLeave={(e) => { if (!isResizingPanelRef.current) (e.target as HTMLElement).style.backgroundColor = "transparent"; }}
+              className="absolute top-0 left-0 right-0 h-[5px] cursor-row-resize bg-transparent z-10 border-t border-trade-border hover:bg-brand"
             />
             {/* Tabs */}
-            <div className="flex" style={{ borderBottom: "1px solid #2a2a3e" }}>
+            <div className="flex border-b border-trade-border">
               <button
                 onClick={() => setPositionTab("open")}
-                style={{
-                  padding: "8px 16px",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  color: positionTab === "open" ? "#d1d4dc" : "#8a8a9a",
-                  background: "none",
-                  borderTop: "none",
-                  borderLeft: "none",
-                  borderRight: "none",
-                  borderBottomStyle: "solid",
-                  borderBottomWidth: "2px",
-                  borderBottomColor: positionTab === "open" ? "#2962ff" : "transparent",
-                  cursor: "pointer",
-                }}
+                className={`px-4 py-2 text-xs font-semibold bg-transparent border-t-0 border-l-0 border-r-0 border-b-2 cursor-pointer ${
+                  positionTab === "open"
+                    ? "text-trade-text border-b-active"
+                    : "text-trade-muted border-b-transparent"
+                }`}
               >
                 Open ({orders.length})
               </button>
               <button
                 onClick={() => setPositionTab("closed")}
-                style={{
-                  padding: "8px 16px",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  color: positionTab === "closed" ? "#d1d4dc" : "#8a8a9a",
-                  background: "none",
-                  borderTop: "none",
-                  borderLeft: "none",
-                  borderRight: "none",
-                  borderBottomStyle: "solid",
-                  borderBottomWidth: "2px",
-                  borderBottomColor: positionTab === "closed" ? "#2962ff" : "transparent",
-                  cursor: "pointer",
-                }}
+                className={`px-4 py-2 text-xs font-semibold bg-transparent border-t-0 border-l-0 border-r-0 border-b-2 cursor-pointer ${
+                  positionTab === "closed"
+                    ? "text-trade-text border-b-active"
+                    : "text-trade-muted border-b-transparent"
+                }`}
               >
                 Closed ({closedOrders.length})
               </button>
             </div>
 
             {/* Table header */}
-            <div style={{ display: "flex", padding: "8px 16px", fontSize: "10px", color: "#6a6a7a", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid #2a2a3e" }}>
-              <div style={{ flex: 1, minWidth: "70px" }}>Symbol</div>
-              <div style={{ flex: 0.7, minWidth: "55px" }}>Type</div>
-              <div style={{ flex: 1, minWidth: "80px", textAlign: "right" }}>Volume</div>
-              <div style={{ flex: 1.1, minWidth: "90px", textAlign: "right" }}>Open price</div>
-              <div style={{ flex: 1.1, minWidth: "90px", textAlign: "right" }}>{positionTab === "closed" ? "Close price" : "Current price"}</div>
-              <div style={{ flex: 1, minWidth: "80px", textAlign: "right" }}>S/L</div>
-              <div style={{ flex: 1, minWidth: "80px", textAlign: "right" }}>T/P</div>
-              <div style={{ flex: 1, minWidth: "80px", textAlign: "right" }}>P/L, USD</div>
-              <div style={{ width: "80px" }} />
+            <div className="flex px-4 py-2 text-[10px] text-trade-dim font-semibold uppercase tracking-wide border-b border-trade-border">
+              <div className="flex-1 min-w-[70px]">Symbol</div>
+              <div className="flex-[0.7] min-w-[55px]">Type</div>
+              <div className="flex-1 min-w-[80px] text-right">Volume</div>
+              <div className="flex-[1.1] min-w-[90px] text-right">Open price</div>
+              <div className="flex-[1.1] min-w-[90px] text-right">{positionTab === "closed" ? "Close price" : "Current price"}</div>
+              <div className="flex-1 min-w-[80px] text-right">S/L</div>
+              <div className="flex-1 min-w-[80px] text-right">T/P</div>
+              <div className="flex-1 min-w-[80px] text-right">P/L, USD</div>
+              <div className="w-20" />
             </div>
 
             {/* Positions list */}
-            <div style={{ overflowY: "auto", flex: 1 }}>
+            <div className="overflow-y-auto flex-1">
               {positionTab === "open" && orders.length === 0 && (
-                <div style={{ textAlign: "center", padding: "24px", color: "#8a8a9a", fontSize: "13px" }}>
+                <div className="text-center p-6 text-trade-muted text-[13px]">
                   No open positions
                 </div>
               )}
               {positionTab === "closed" && closedOrders.length === 0 && (
-                <div style={{ textAlign: "center", padding: "24px", color: "#8a8a9a", fontSize: "13px" }}>
+                <div className="text-center p-6 text-trade-muted text-[13px]">
                   No closed positions
                 </div>
               )}
@@ -806,38 +693,27 @@ export default function TradePage() {
                   return (
                     <div
                       key={o.orderId}
-                      style={{ display: "flex", alignItems: "center", padding: "10px 16px", fontSize: "12px", borderBottom: "1px solid #1e222d" }}
+                      className="flex items-center px-4 py-2.5 text-xs border-b border-trade-secondary"
                     >
-                      <div style={{ flex: 1, minWidth: "70px", display: "flex", alignItems: "center", gap: "6px" }}>
-                        <span style={{ fontWeight: 600, color: "#d1d4dc" }}>{assetLabel}</span>
+                      <div className="flex-1 min-w-[70px] flex items-center gap-1.5">
+                        <span className="font-semibold text-trade-text">{assetLabel}</span>
                       </div>
-                      <div style={{ flex: 0.7, minWidth: "55px", display: "flex", alignItems: "center", gap: "4px" }}>
-                        <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: o.orderType === "LONG" ? "#26a69a" : "#ef5350" }} />
-                        <span style={{ color: "#d1d4dc" }}>{o.orderType === "LONG" ? "Buy" : "Sell"}</span>
+                      <div className="flex-[0.7] min-w-[55px] flex items-center gap-1">
+                        <span className={`w-1.5 h-1.5 rounded-full ${o.orderType === "LONG" ? "bg-bull" : "bg-bear"}`} />
+                        <span className="text-trade-text">{o.orderType === "LONG" ? "Buy" : "Sell"}</span>
                       </div>
-                      <div style={{ flex: 1, minWidth: "80px", textAlign: "right", color: "#d1d4dc" }}>{fromInt(o.qtyInt).toFixed(8)}</div>
-                      <div style={{ flex: 1.1, minWidth: "90px", textAlign: "right", color: "#8a8a9a", fontFamily: "monospace" }}>{parseFloat(o.executionPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                      <div style={{ flex: 1.1, minWidth: "90px", textAlign: "right", color: "#d1d4dc", fontFamily: "monospace" }}>{currentMid !== "—" ? parseFloat(currentMid).toLocaleString(undefined, { minimumFractionDigits: 2 }) : "—"}</div>
-                      <div style={{ flex: 1, minWidth: "80px", textAlign: "right", color: sl ? "#ef5350" : "#6a6a7a", fontFamily: "monospace" }}>{sl ? sl.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "—"}</div>
-                      <div style={{ flex: 1, minWidth: "80px", textAlign: "right", color: tp ? "#26a69a" : "#6a6a7a", fontFamily: "monospace" }}>{tp ? tp.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "—"}</div>
-                      <div style={{ flex: 1, minWidth: "80px", textAlign: "right", fontWeight: 600, fontFamily: "monospace", color: pnl >= 0 ? "#26a69a" : "#ef5350" }}>
+                      <div className="flex-1 min-w-[80px] text-right text-trade-text">{fromInt(o.qtyInt).toFixed(8)}</div>
+                      <div className="flex-[1.1] min-w-[90px] text-right text-trade-muted font-mono">{parseFloat(o.executionPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      <div className="flex-[1.1] min-w-[90px] text-right text-trade-text font-mono">{currentMid !== "—" ? parseFloat(currentMid).toLocaleString(undefined, { minimumFractionDigits: 2 }) : "—"}</div>
+                      <div className={`flex-1 min-w-[80px] text-right font-mono ${sl ? "text-bear" : "text-trade-dim"}`}>{sl ? sl.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "—"}</div>
+                      <div className={`flex-1 min-w-[80px] text-right font-mono ${tp ? "text-bull" : "text-trade-dim"}`}>{tp ? tp.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "—"}</div>
+                      <div className={`flex-1 min-w-[80px] text-right font-semibold font-mono ${pnl >= 0 ? "text-bull" : "text-bear"}`}>
                         {pnl >= 0 ? "+" : ""}{pnl.toFixed(2)}
                       </div>
-                      <div style={{ width: "80px", textAlign: "right" }}>
+                      <div className="w-20 text-right">
                         <button
                           onClick={() => handleCloseOrder(o.orderId)}
-                          style={{
-                            background: "none",
-                            color: "#8a8a9a",
-                            border: "1px solid #2a2a3e",
-                            padding: "4px 12px",
-                            borderRadius: "3px",
-                            fontSize: "11px",
-                            fontWeight: 600,
-                            cursor: "pointer",
-                          }}
-                          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#ef5350"; e.currentTarget.style.color = "#ef5350"; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a2a3e"; e.currentTarget.style.color = "#8a8a9a"; }}
+                          className="bg-transparent text-trade-muted border border-trade-border px-3 py-1 rounded-sm text-[11px] font-semibold cursor-pointer hover:border-bear hover:text-bear"
                         >
                           Close
                         </button>
@@ -861,33 +737,33 @@ export default function TradePage() {
                   return (
                     <div
                       key={o.orderId}
-                      style={{ display: "flex", alignItems: "center", padding: "10px 16px", fontSize: "12px", borderBottom: "1px solid #1e222d" }}
+                      className="flex items-center px-4 py-2.5 text-xs border-b border-trade-secondary"
                     >
-                      <div style={{ flex: 1, minWidth: "70px", fontWeight: 600, color: "#d1d4dc" }}>{assetLabel}</div>
-                      <div style={{ flex: 0.7, minWidth: "55px", display: "flex", alignItems: "center", gap: "4px" }}>
-                        <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: o.orderType === "LONG" ? "#26a69a" : "#ef5350" }} />
-                        <span style={{ color: "#d1d4dc" }}>{o.orderType === "LONG" ? "Buy" : "Sell"}</span>
+                      <div className="flex-1 min-w-[70px] font-semibold text-trade-text">{assetLabel}</div>
+                      <div className="flex-[0.7] min-w-[55px] flex items-center gap-1">
+                        <span className={`w-1.5 h-1.5 rounded-full ${o.orderType === "LONG" ? "bg-bull" : "bg-bear"}`} />
+                        <span className="text-trade-text">{o.orderType === "LONG" ? "Buy" : "Sell"}</span>
                       </div>
-                      <div style={{ flex: 1, minWidth: "80px", textAlign: "right", color: "#d1d4dc" }}>{fromInt(o.qtyInt).toFixed(8)}</div>
-                      <div style={{ flex: 1.1, minWidth: "90px", textAlign: "right", color: "#8a8a9a", fontFamily: "monospace" }}>{parseFloat(o.executionPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                      <div style={{ flex: 1.1, minWidth: "90px", textAlign: "right", color: "#d1d4dc", fontFamily: "monospace" }}>{closePrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                      <div style={{ flex: 1, minWidth: "80px", textAlign: "right", color: sl ? "#ef5350" : "#6a6a7a", fontFamily: "monospace" }}>{sl ? sl.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "—"}</div>
-                      <div style={{ flex: 1, minWidth: "80px", textAlign: "right", color: tp ? "#26a69a" : "#6a6a7a", fontFamily: "monospace" }}>{tp ? tp.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "—"}</div>
-                      <div style={{ flex: 1, minWidth: "80px", textAlign: "right", fontWeight: 600, fontFamily: "monospace", color: pnl >= 0 ? "#26a69a" : "#ef5350" }}>
+                      <div className="flex-1 min-w-[80px] text-right text-trade-text">{fromInt(o.qtyInt).toFixed(8)}</div>
+                      <div className="flex-[1.1] min-w-[90px] text-right text-trade-muted font-mono">{parseFloat(o.executionPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      <div className="flex-[1.1] min-w-[90px] text-right text-trade-text font-mono">{closePrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      <div className={`flex-1 min-w-[80px] text-right font-mono ${sl ? "text-bear" : "text-trade-dim"}`}>{sl ? sl.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "—"}</div>
+                      <div className={`flex-1 min-w-[80px] text-right font-mono ${tp ? "text-bull" : "text-trade-dim"}`}>{tp ? tp.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "—"}</div>
+                      <div className={`flex-1 min-w-[80px] text-right font-semibold font-mono ${pnl >= 0 ? "text-bull" : "text-bear"}`}>
                         {pnl >= 0 ? "+" : ""}{pnl.toFixed(2)}
                       </div>
-                      <div style={{ width: "80px", textAlign: "center" }}>
+                      <div className="w-20 text-center">
                         {(() => {
                           const reason = o.closeReason;
                           const cfg = reason === "MARGIN_CALL"
-                            ? { label: "Margin Call", bg: "rgba(239,83,80,0.15)", color: "#ef5350" }
+                            ? { label: "Margin Call", cls: "bg-bear/15 text-bear" }
                             : reason === "STOP_LOSS"
-                            ? { label: "S/L", bg: "rgba(255,152,0,0.15)", color: "#ff9800" }
+                            ? { label: "S/L", cls: "bg-warn/15 text-warn" }
                             : reason === "TAKE_PROFIT"
-                            ? { label: "T/P", bg: "rgba(38,166,154,0.15)", color: "#26a69a" }
-                            : { label: "Manual", bg: "rgba(138,138,154,0.15)", color: "#8a8a9a" };
+                            ? { label: "T/P", cls: "bg-bull/15 text-bull" }
+                            : { label: "Manual", cls: "bg-trade-muted/15 text-trade-muted" };
                           return (
-                            <span style={{ padding: "2px 8px", borderRadius: "4px", fontSize: "10px", fontWeight: 600, backgroundColor: cfg.bg, color: cfg.color }}>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${cfg.cls}`}>
                               {cfg.label}
                             </span>
                           );
@@ -901,59 +777,41 @@ export default function TradePage() {
         </div>
 
         {/* ─── Right Sidebar: Order Form ────────────────── */}
-        <div style={{ width: "280px", borderLeft: "1px solid #2a2a3e", padding: "16px", overflowY: "auto" }}>
+        <div className="w-[280px] border-l border-trade-border p-4 overflow-y-auto">
 
-          <div style={{ fontSize: "14px", fontWeight: 700, color: "#d1d4dc", marginBottom: "16px" }}>
+          <div className="text-sm font-bold text-trade-text mb-4">
             {ASSETS.find((a) => a.symbol === selectedAsset)?.label}/USD
           </div>
 
           {/* Sell / Buy buttons */}
-          <div className="flex" style={{ gap: "4px", marginBottom: "16px" }}>
+          <div className="flex gap-1 mb-4">
             <button
               onClick={() => setOrderType("SHORT")}
-              style={{
-                flex: 1,
-                padding: "12px 8px",
-                background: orderType === "SHORT" ? "#ef5350" : "#1e222d",
-                color: orderType === "SHORT" ? "#fff" : "#8a8a9a",
-                border: "none",
-                borderRadius: "4px",
-                fontSize: "12px",
-                fontWeight: 700,
-                cursor: "pointer",
-                textAlign: "center",
-              }}
+              className={`flex-1 py-3 px-2 border-none rounded text-xs font-bold cursor-pointer text-center ${
+                orderType === "SHORT" ? "bg-bear text-white" : "bg-trade-secondary text-trade-muted"
+              }`}
             >
               <div>Sell</div>
               {currentPrice && (
-                <div style={{ fontSize: "14px", marginTop: "2px" }}>{currentPrice.bidPrice.toFixed(2)}</div>
+                <div className="text-sm mt-0.5">{currentPrice.bidPrice.toFixed(2)}</div>
               )}
             </button>
             <button
               onClick={() => setOrderType("LONG")}
-              style={{
-                flex: 1,
-                padding: "12px 8px",
-                background: orderType === "LONG" ? "#26a69a" : "#1e222d",
-                color: orderType === "LONG" ? "#fff" : "#8a8a9a",
-                border: "none",
-                borderRadius: "4px",
-                fontSize: "12px",
-                fontWeight: 700,
-                cursor: "pointer",
-                textAlign: "center",
-              }}
+              className={`flex-1 py-3 px-2 border-none rounded text-xs font-bold cursor-pointer text-center ${
+                orderType === "LONG" ? "bg-bull text-white" : "bg-trade-secondary text-trade-muted"
+              }`}
             >
               <div>Buy</div>
               {currentPrice && (
-                <div style={{ fontSize: "14px", marginTop: "2px" }}>{currentPrice.askPrice.toFixed(2)}</div>
+                <div className="text-sm mt-0.5">{currentPrice.askPrice.toFixed(2)}</div>
               )}
             </button>
           </div>
 
           {/* Leverage */}
-          <div style={{ marginBottom: "16px" }}>
-            <label style={{ fontSize: "11px", color: "#8a8a9a", display: "block", marginBottom: "6px" }}>
+          <div className="mb-4">
+            <label className="text-[11px] text-trade-muted block mb-1.5">
               Leverage: {leverage}x
             </label>
             <input
@@ -962,94 +820,61 @@ export default function TradePage() {
               max={100}
               value={leverage}
               onChange={(e) => setLeverage(Number(e.target.value))}
-              style={{ width: "100%", accentColor: "#FFB800" }}
+              className="w-full accent-brand"
             />
-            <div className="flex" style={{ justifyContent: "space-between", fontSize: "10px", color: "#8a8a9a" }}>
+            <div className="flex justify-between text-[10px] text-trade-muted">
               <span>1x</span>
               <span>100x</span>
             </div>
           </div>
 
           {/* Volume */}
-          <div style={{ marginBottom: "16px" }}>
-            <label style={{ fontSize: "11px", color: "#8a8a9a", display: "block", marginBottom: "6px" }}>Volume (USD)</label>
+          <div className="mb-4">
+            <label className="text-[11px] text-trade-muted block mb-1.5">Volume (USD)</label>
             <input
               type="number"
               value={qty}
               onChange={(e) => setQty(e.target.value)}
               placeholder="0.00"
-              style={{
-                width: "100%",
-                background: "#1e222d",
-                border: "1px solid #2a2a3e",
-                borderRadius: "4px",
-                padding: "10px",
-                color: "#d1d4dc",
-                fontSize: "13px",
-              }}
+              className="w-full bg-trade-secondary border border-trade-border rounded py-2.5 px-2.5 text-trade-text text-[13px]"
             />
           </div>
 
           {/* Take Profit */}
-          <div style={{ marginBottom: "16px" }}>
-            <label style={{ fontSize: "11px", color: "#8a8a9a", display: "block", marginBottom: "6px" }}>Take Profit</label>
+          <div className="mb-4">
+            <label className="text-[11px] text-trade-muted block mb-1.5">Take Profit</label>
             <input
               type="number"
               value={takeProfit}
               onChange={(e) => setTakeProfit(e.target.value)}
               placeholder="Not set"
-              style={{
-                width: "100%",
-                background: "#1e222d",
-                border: "1px solid #2a2a3e",
-                borderRadius: "4px",
-                padding: "10px",
-                color: "#d1d4dc",
-                fontSize: "13px",
-              }}
+              className="w-full bg-trade-secondary border border-trade-border rounded py-2.5 px-2.5 text-trade-text text-[13px]"
             />
           </div>
 
           {/* Stop Loss */}
-          <div style={{ marginBottom: "24px" }}>
-            <label style={{ fontSize: "11px", color: "#8a8a9a", display: "block", marginBottom: "6px" }}>Stop Loss</label>
+          <div className="mb-6">
+            <label className="text-[11px] text-trade-muted block mb-1.5">Stop Loss</label>
             <input
               type="number"
               value={stopLoss}
               onChange={(e) => setStopLoss(e.target.value)}
               placeholder="Not set"
-              style={{
-                width: "100%",
-                background: "#1e222d",
-                border: "1px solid #2a2a3e",
-                borderRadius: "4px",
-                padding: "10px",
-                color: "#d1d4dc",
-                fontSize: "13px",
-              }}
+              className="w-full bg-trade-secondary border border-trade-border rounded py-2.5 px-2.5 text-trade-text text-[13px]"
             />
           </div>
 
           {orderError && (
-            <p style={{ color: "#ef5350", fontSize: "12px", marginBottom: "12px" }}>{orderError}</p>
+            <p className="text-bear text-xs mb-3">{orderError}</p>
           )}
 
           {/* Place Order */}
           <button
             onClick={handleOpenOrder}
             disabled={orderLoading || !qty}
-            style={{
-              width: "100%",
-              padding: "14px",
-              background: orderType === "LONG" ? "#26a69a" : "#ef5350",
-              color: "#fff",
-              border: "none",
-              borderRadius: "4px",
-              fontSize: "13px",
-              fontWeight: 700,
-              cursor: orderLoading || !qty ? "not-allowed" : "pointer",
-              opacity: orderLoading || !qty ? 0.5 : 1,
-            }}
+            className={`w-full py-3.5 border-none rounded text-[13px] font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+              orderType === "LONG" ? "bg-bull" : "bg-bear"
+            }`}
           >
             {orderLoading
               ? "Placing..."

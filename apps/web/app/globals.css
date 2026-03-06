@@ -1,12 +1,37 @@
 @import "tailwindcss";
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+@theme {
+  /* Brand */
+  --color-brand: #FFB800;
+  --color-brand-light: #FFF8E1;
+
+  /* Light theme text */
+  --color-dark: #141d22;
+  --color-light-bg: #F2F2F2;
+
+  /* Trade dark theme */
+  --color-trade-bg: #131722;
+  --color-trade-chart: #1a1a2e;
+  --color-trade-secondary: #1e222d;
+  --color-trade-border: #2a2a3e;
+  --color-trade-text: #d1d4dc;
+  --color-trade-muted: #8a8a9a;
+  --color-trade-dim: #6a6a7a;
+
+  /* Market colors */
+  --color-bull: #26a69a;
+  --color-bear: #ef5350;
+  --color-warn: #ff9800;
+  --color-info: #42a5f5;
+  --color-active: #2962ff;
 }
 
-html, body {
-  height: 100%;
-}
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
 
+  html, body {
+    height: 100%;
+  }
+}
