@@ -2,13 +2,11 @@ FROM oven/bun:1.3 AS base
 
 WORKDIR /app
 
-# ── Install dependencies ──
-FROM base AS deps
+# ── Build stage ──
+FROM base AS build
 
-# Copy root workspace files
 COPY package.json bun.lock turbo.json ./
 
-# Copy ALL workspace package.json files (bun needs full workspace resolution)
 COPY apps/http-backend/package.json ./apps/http-backend/
 COPY apps/price-poller/package.json ./apps/price-poller/
 COPY apps/realtime-server/package.json ./apps/realtime-server/
@@ -24,16 +22,8 @@ COPY packages/ui/package.json ./packages/ui/
 COPY packages/eslint-config/package.json ./packages/eslint-config/
 COPY packages/typescript-config/package.json ./packages/typescript-config/
 
-# Install all dependencies
 RUN bun install
 
-# ── Build stage ──
-FROM base AS build
-
-COPY --from=deps /app/node_modules ./node_modules
-
-# Copy full source
-COPY package.json bun.lock turbo.json ./
 COPY packages ./packages
 COPY apps/http-backend ./apps/http-backend
 
