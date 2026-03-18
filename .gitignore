@@ -37,3 +37,10 @@ yarn-error.log*
 .DS_Store
 *.pem
 excalidraw.log
+
+# Terraform
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.backup
+infra/terraform.tfvars
+infra/.terraform.lock.hcl
