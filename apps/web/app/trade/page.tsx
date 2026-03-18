@@ -169,7 +169,7 @@ export default function TradePage() {
         const { ticket } = data;
 
         // Step 2: Connect to WebSocket
-        ws = new WebSocket("ws://localhost:3006");
+        ws = new WebSocket(process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3006");
 
         ws.onopen = () => {
           // Step 3: Authenticate with the ticket
