@@ -34,7 +34,7 @@ COPY package.json bun.lock turbo.json ./
 COPY packages ./packages
 COPY apps/db-worker ./apps/db-worker
 
-RUN cd packages/prisma-client && bun add dotenv && bunx prisma generate
+RUN cd packages/prisma-client && bun add dotenv && DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" bunx prisma generate
 
 # ── Runtime ──
 FROM base AS runtime
