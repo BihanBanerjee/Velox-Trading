@@ -38,7 +38,7 @@ COPY packages ./packages
 COPY apps/http-backend ./apps/http-backend
 
 # Generate Prisma client
-RUN cd packages/prisma-client && bunx prisma generate
+RUN cd packages/prisma-client && bun add dotenv && bunx prisma generate
 
 # ── Runtime ──
 FROM base AS runtime

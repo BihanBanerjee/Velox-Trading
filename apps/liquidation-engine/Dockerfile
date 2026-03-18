@@ -34,7 +34,7 @@ COPY package.json bun.lock turbo.json ./
 COPY packages ./packages
 COPY apps/liquidation-engine ./apps/liquidation-engine
 
-RUN cd packages/prisma-client && bunx prisma generate
+RUN cd packages/prisma-client && bun add dotenv && bunx prisma generate
 
 # ── Runtime ──
 FROM base AS runtime
