@@ -71,14 +71,15 @@ export const getCandles = async (req: Request, res: Response) => {
     // Reverse to get chronological order (oldest first)
     const chronologicalCandles = candles.reverse();
 
-    // Format for lightweight-charts (convert timestamps to UTC seconds)
+    // Format for lightweight-charts (convert timestamps to UTC seconds, scale prices by 10^8)
+    const PRICE_SCALE = 1e8;
     const formattedCandles = chronologicalCandles.map(candle => ({
       time: Math.floor(new Date(candle.time).getTime() / 1000), // Ensure UTC timestamp in seconds
-      open: Number(candle.open),
-      high: Number(candle.high),
-      low: Number(candle.low), 
-      close: Number(candle.close),
-      volume: Number(candle.volume)
+      open: Number(candle.open) / PRICE_SCALE,
+      high: Number(candle.high) / PRICE_SCALE,
+      low: Number(candle.low) / PRICE_SCALE,
+      close: Number(candle.close) / PRICE_SCALE,
+      volume: Number(candle.volume) / PRICE_SCALE
     }));
 
     // Calculate time range from actual data
