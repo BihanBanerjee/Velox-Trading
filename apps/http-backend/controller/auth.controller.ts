@@ -199,9 +199,9 @@ export const verifyMagicLink = async (req: Request, res: Response) => {
         }
 
         const authToken = generateToken(user.id);
-        setAuthCookie(res, authToken);
 
-        return res.redirect(302, `${process.env.FRONTEND_URL}/trade`);
+        // Redirect to frontend callback route which sets the cookie on the correct domain
+        return res.redirect(302, `${process.env.FRONTEND_URL}/api/auth/callback?token=${authToken}`);
     } catch (error) {
         console.error(error);
         return res.status(401).json({ error: "Invalid or expired magic link" });
