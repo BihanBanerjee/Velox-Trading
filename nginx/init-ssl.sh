@@ -12,10 +12,10 @@ set -e
 echo "==> Step 1: Creating temporary Nginx config (HTTP only)..."
 
 # Backup the real config
-cp /root/ExnessRedoMine/nginx/nginx.conf /root/ExnessRedoMine/nginx/nginx.conf.bak
+cp /root/Velox-Trading/nginx/nginx.conf /root/Velox-Trading/nginx/nginx.conf.bak
 
 # Write a temporary HTTP-only config for Certbot challenge
-cat > /root/ExnessRedoMine/nginx/nginx.conf <<'TMPCONF'
+cat > /root/Velox-Trading/nginx/nginx.conf <<'TMPCONF'
 events {
     worker_connections 1024;
 }
@@ -49,7 +49,7 @@ docker compose -f docker-compose.prod.yml run --rm certbot certonly \
     -d "$DOMAIN"
 
 echo "==> Step 4: Restoring full Nginx config (HTTPS)..."
-cp /root/ExnessRedoMine/nginx/nginx.conf.bak /root/ExnessRedoMine/nginx/nginx.conf
+cp /root/Velox-Trading/nginx/nginx.conf.bak /root/Velox-Trading/nginx/nginx.conf
 
 echo "==> Step 5: Reloading Nginx with SSL..."
 docker compose -f docker-compose.prod.yml restart nginx
@@ -58,4 +58,4 @@ echo ""
 echo "==> Done! https://$DOMAIN is now live with SSL."
 echo ""
 echo "To auto-renew certificates, add this cron job:"
-echo '0 3 * * * cd /root/ExnessRedoMine && docker compose -f docker-compose.prod.yml run --rm certbot renew && docker compose -f docker-compose.prod.yml exec nginx nginx -s reload'
+echo '0 3 * * * cd /root/Velox-Trading && docker compose -f docker-compose.prod.yml run --rm certbot renew && docker compose -f docker-compose.prod.yml exec nginx nginx -s reload'
