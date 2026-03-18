@@ -23,7 +23,7 @@ COPY packages/ui/package.json ./packages/ui/
 COPY packages/eslint-config/package.json ./packages/eslint-config/
 COPY packages/typescript-config/package.json ./packages/typescript-config/
 
-RUN bun install --frozen-lockfile
+RUN bun install
 
 # ── Build stage ──
 FROM base AS build
