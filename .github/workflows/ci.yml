@@ -42,6 +42,7 @@ jobs:
           host: ${{ secrets.DROPLET_IP }}
           username: root
           key: ${{ secrets.DROPLET_SSH_KEY }}
+          command_timeout: 30m
           script: |
             cd /root/Velox-Trading
             git pull origin main
