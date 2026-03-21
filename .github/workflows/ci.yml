@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD
 
 on:
   push:
@@ -28,3 +28,28 @@ jobs:
 
       - name: Type check
         run: bun run check-types
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: ci
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DROPLET_IP }}
+          username: root
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script: |
+            cd /root/Velox-Trading
+            git pull origin main
+            docker compose -f docker-compose.prod.yml build liquidation-engine
+            docker compose -f docker-compose.prod.yml build http-backend
+            docker compose -f docker-compose.prod.yml build realtime-server
+            docker compose -f docker-compose.prod.yml build price-poller
+            docker compose -f docker-compose.prod.yml build db-worker
+            docker compose -f docker-compose.prod.yml build batch-uploader
+            docker compose -f docker-compose.prod.yml up -d
+            docker builder prune -af
