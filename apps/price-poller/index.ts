@@ -83,7 +83,8 @@ async function main () {
     };
 
     ws.onclose = () => {
-        console.log("client closed");
+        console.log("client closed — exiting so Docker restarts the container");
+        process.exit(1);
     }
 }
 

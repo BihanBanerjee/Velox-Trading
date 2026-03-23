@@ -53,4 +53,5 @@ jobs:
             docker compose -f docker-compose.prod.yml build db-worker
             docker compose -f docker-compose.prod.yml build batch-uploader
             docker compose -f docker-compose.prod.yml up -d
+            docker compose -f docker-compose.prod.yml restart nginx
             docker builder prune -af
